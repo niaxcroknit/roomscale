@@ -60,10 +60,10 @@
 ### 개인정보처리방침
 아래 주소를 붙여 넣어요.
 ```
-https://niaxcroknit.github.io/roomscale/
+https://niaxcroknit.github.io/roomscale/privacy-policy.html
 ```
-> 처음 한 번은 GitHub에서 페이지를 켜야 열려요: 저장소 **Settings → Pages → Build and deployment** 에서 Source **Deploy from a branch**, Branch **main**, 폴더 **/docs** 를 고르고 **Save**. 1~2분 뒤 위 주소가 열려요.
-> 내용은 저장소의 `docs/index.html` 이에요. 노션 페이지(https://app.notion.com/p/4064235ad3ee8015b12ee4da0bf19985?source=copy_link)를 대신 써도 되지만, 그때는 로그인 안 한 창에서 열리는지 꼭 확인하세요.
+> 처음 한 번은 GitHub에서 페이지를 켜야 열려요: 저장소 **Settings → Pages → Build and deployment** 에서 Source **Deploy from a branch**, Branch **main**, 폴더 **/docs** 를 고르고 **Save**. 1~2분 뒤 위 주소가 열려요. (주소 끝 없이 `https://niaxcroknit.github.io/roomscale/` 로 들어가면 앱 화면이 떠요)
+> 내용은 저장소의 `docs/privacy-policy.html` 이에요. 노션 페이지(https://app.notion.com/p/4064235ad3ee8015b12ee4da0bf19985?source=copy_link)를 대신 써도 되지만, 그때는 로그인 안 한 창에서 열리는지 꼭 확인하세요.
 
 ### 광고
 **아니요, 광고가 없습니다**
