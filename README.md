@@ -4,7 +4,7 @@
 
 - 패키지 이름: `com.nia.roomscale`
 - 기준 버전: Android 16 (API 36), 최소 Android 7.0
-- 개인정보처리방침: https://app.notion.com/p/4064235ad3ee8015b12ee4da0bf19985?source=copy_link
+- 개인정보처리방침: https://niaxcroknit.github.io/roomscale/
 - 문의: kimseohappiness@gmail.com
 
 ## 안내서
