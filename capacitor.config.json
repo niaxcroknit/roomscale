@@ -1,0 +1,9 @@
+{
+  "appId": "com.nia.roomscale",
+  "appName": "룸 스케일",
+  "webDir": "www",
+  "android": { "backgroundColor": "#f0f1f2" },
+  "plugins": {
+    "SystemBars": { "insetsHandling": "css", "style": "LIGHT" }
+  }
+}

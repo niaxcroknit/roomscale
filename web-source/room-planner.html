@@ -1,0 +1,1172 @@
+<title>룸 스케일</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: drafting table — big measured drawing on the left, spec sheet panel on the right; stacks on phones. Soft pencil greys only. */
+:root{
+  --paper:#f0f1f2; --sheet:#fbfbfc; --ink:#3b4349; --ink-2:#7a848a; --rule:#dde0e3;
+  --line:#a7afb4; --wall:#8d969c; --grid:#ebedef; --grid-major:#dadee1;
+  --shade:#eef0f1; --shade-2:#e3e6e8; --shade-3:#d5d9dc; --behind:#c6ccd0; --pick:#9da6ac; --frame:#e8eaec; --hover:#f5f6f7;
+  --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#16191c; --sheet:#1c2024; --ink:#d3d8dc; --ink-2:#8c959b; --rule:#2c3237;
+  --line:#5b646a; --wall:#7a848a; --grid:#22272b; --grid-major:#2c3237;
+  --shade:#252a2f; --shade-2:#2e3439; --shade-3:#3a4147; --behind:#474f56; --pick:#6c767d; --frame:#2a2f34; --hover:#22272b; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --paper:#16191c; --sheet:#1c2024; --ink:#d3d8dc; --ink-2:#8c959b; --rule:#2c3237;
+  --line:#5b646a; --wall:#7a848a; --grid:#22272b; --grid-major:#2c3237;
+  --shade:#252a2f; --shade-2:#2e3439; --shade-3:#3a4147; --behind:#474f56; --pick:#6c767d; --frame:#2a2f34; --hover:#22272b; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+.wrap{max-width:1280px;margin:0 auto;padding-inline:16px;padding-block:16px 32px;display:flex;flex-direction:column;gap:12px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+h1{font-size:20px;font-weight:600;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1 small{font-family:var(--mono);font-size:12px;color:var(--ink-2);font-weight:400;margin-left:8px}
+.tabs{display:flex;gap:4px;background:var(--sheet);border:1px solid var(--rule);border-radius:8px;padding:3px}
+.tabs button{border:0;background:none;color:var(--ink-2);font:500 13px var(--sans);padding:6px 12px;border-radius:6px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--shade-2);color:var(--ink)}
+.tabs button:disabled{opacity:.4;cursor:default}
+/* 배치안 바 */
+.plans{display:flex;align-items:center;gap:6px;overflow-x:auto;padding-bottom:2px;min-width:0}
+.plans .lbl{font-size:12px;color:var(--ink-2);white-space:nowrap;margin-right:2px}
+.chip{flex:none;border:1px solid var(--rule);background:var(--sheet);color:var(--ink-2);font:500 13px var(--sans);padding:5px 12px;border-radius:99px;cursor:pointer;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.chip:hover{color:var(--ink);border-color:var(--line)}
+.chip[aria-current="true"]{background:var(--shade-2);color:var(--ink);border-color:var(--line)}
+.chip.add{border-style:dashed}
+.chip:disabled{opacity:.4;cursor:default}
+.chip:disabled:hover{color:var(--ink-2);border-color:var(--rule)}
+.sync{margin-left:auto;flex:none;font-size:12px;color:var(--ink-2);white-space:nowrap}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;align-items:start}
+@media (max-width:880px){.layout{grid-template-columns:minmax(0,1fr)}.sync{margin-left:6px}}
+@media (max-width:600px){.sync{display:none}.hint{font-size:12px}.stage{padding:10px}}
+.stage{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.stage-head{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap}
+.stage-head b{font-weight:600}
+.hist{margin-left:auto;display:flex;gap:6px;flex:none}
+.hbtn{min-width:44px;height:36px;padding:0 12px;border:1px solid var(--line);background:var(--shade);color:var(--ink);font:500 15px var(--sans);border-radius:8px;cursor:pointer}
+.hbtn span{font-size:13px}
+.hbtn:hover{border-color:var(--line);background:var(--hover)}
+.hbtn:disabled{opacity:.55;cursor:default;background:var(--sheet)}
+@media (max-width:520px){.hbtn span{display:none}.hbtn{font-size:18px}.hbtn.zl{font-size:12px}.stage-head .scale{order:3;width:100%}.stage-head b{width:100%}.zoom{margin-left:0}.hist{margin-left:auto}}
+.scale{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+#cv{width:100%;height:auto;max-height:78vh;min-height:220px;display:block;margin:0 auto;touch-action:pan-x pan-y pinch-zoom;user-select:none;-webkit-user-select:none}
+.cvwrap{overflow:auto;max-height:78vh;-webkit-overflow-scrolling:touch;border-radius:6px}
+#cv.zoomed{max-height:none}
+.furn,.box,.sbox,.door,.win,.divg{touch-action:none}
+.zoom{display:flex;gap:4px;flex:none;margin-left:auto}
+.zoom + .hist{margin-left:0}
+.hbtn.sm{min-width:36px;padding:0 8px}
+.hbtn.zl{font:500 12px var(--mono);min-width:52px}
+.hbtn[aria-pressed="true"]{background:var(--shade-3)}
+.tip{font-size:12.5px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:4px 14px}
+.hint{font-size:12.5px;color:var(--ink-2);display:flex;flex-direction:column;gap:4px;background:var(--paper);border-radius:8px;padding:10px 12px}
+.furn text.halo{paint-order:stroke;stroke:var(--sheet)}
+.clr line,.clr path{stroke:var(--ink-2);stroke-dasharray:3 2;fill:none;pointer-events:none}
+.clr text{font-family:var(--mono);font-weight:500;fill:var(--ink);paint-order:stroke;stroke:var(--sheet);pointer-events:none}
+.cellname{fill:var(--ink-2);font-family:var(--sans);font-weight:500;pointer-events:none}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cmpcol{display:flex;flex-direction:column;gap:8px;min-width:0}
+.cmpcol select{font:500 14px var(--sans);color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;width:100%}
+.cmpcol svg{width:100%;height:auto;display:block}
+.cmpinfo{font-size:12.5px;color:var(--ink-2)}
+.stage.cmp .zoom,.stage.cmp .hist #undo,.stage.cmp .hist #redo{display:none}
+.cmptbl td:not(:first-child),.cmptbl th:not(:first-child){text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+@media (max-width:700px){.compare{grid-template-columns:1fr}}
+.hint .bad{color:var(--ink);font-weight:500}
+.hint .bad::before{content:'⚠ '}
+aside{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.card h2{font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:0}
+.card.focus{border-color:var(--line)}
+.grid2,.grid3,.grid4{display:grid;gap:8px}
+.grid2{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:repeat(3,1fr)}.grid4{grid-template-columns:repeat(4,1fr)}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink-2);min-width:0}
+input{font:15px var(--mono);color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+input[type=text]{font-family:var(--sans)}
+input:focus-visible,button:focus-visible{outline:2px solid var(--line);outline-offset:1px}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.btn{font:500 13px var(--sans);border:1px solid var(--rule);background:var(--sheet);color:var(--ink);border-radius:6px;padding:7px 11px;cursor:pointer}
+.btn:hover{border-color:var(--line);background:var(--hover)}
+.btn.primary{background:var(--shade-2);border-color:var(--line)}
+.btn.primary:hover{background:var(--shade-3)}
+.btn.danger{color:var(--ink-2)}
+.btn.armed{background:var(--shade-3);color:var(--ink);border-color:var(--wall)}
+.list{display:flex;flex-direction:column;gap:2px;margin:0;padding:0;list-style:none}
+.list button{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;border:0;background:none;color:var(--ink);font:14px var(--sans);padding:6px 6px;border-radius:6px;cursor:pointer}
+.list button:hover{background:var(--hover)}
+.list button[aria-current="true"]{background:var(--shade-2)}
+.sw{width:12px;height:12px;border-radius:3px;border:1px solid var(--line)}
+.dim{font-family:var(--mono);font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{font-size:11px;padding:0 7px;border-radius:99px;border:1px dashed var(--wall);color:var(--ink);white-space:nowrap}
+.boxrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:5px 6px;border-radius:6px;cursor:pointer}
+.boxrow:hover{background:var(--hover)}
+.boxrow.on{background:var(--shade-2)}
+.x{border:0;background:none;color:var(--ink-2);font-size:16px;cursor:pointer;padding:0 4px;line-height:1}
+.x:hover{color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+td,th{padding:4px 2px;border-bottom:1px solid var(--rule);text-align:left}
+th{font-weight:500;color:var(--ink-2);font-size:11.5px}
+td.n{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+.big{font-weight:600;color:var(--ink)}
+.howfit{font-size:12px;color:var(--ink-2)}
+.note{font-size:12px;color:var(--ink-2);margin:0}
+.empty{font-size:13px;color:var(--ink-2);margin:0}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.seg button{border:1px solid var(--rule);background:var(--sheet);color:var(--ink-2);font:500 12.5px var(--sans);padding:6px 0;border-radius:6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--shade-2);color:var(--ink);border-color:var(--line)}
+/* svg */
+.floor{fill:url(#grid)}
+.wall{fill:none;stroke:var(--wall);pointer-events:none}
+.olabel{font-family:var(--sans);font-weight:500;fill:var(--ink-2);paint-order:stroke;stroke:var(--sheet);pointer-events:none}
+.dimtxt{font-family:var(--mono);fill:var(--ink-2)}
+.dimln{stroke:var(--line);fill:none}
+.furn .body{fill:var(--shade);stroke:var(--line);cursor:grab;stroke-linejoin:round}
+.furn .front{stroke:var(--line);fill:none;pointer-events:none}
+.furn text{fill:var(--ink);pointer-events:none;font-family:var(--sans)}
+.furn.bad .body{stroke-dasharray:4 3}
+.furn.sel .body{fill:var(--shade-3)}
+.gap{fill:var(--sheet);stroke:none}
+.door .leaf,.door .arc,.door .jamb,.win .pane{stroke:var(--line);fill:none}
+.door .swing{fill:var(--shade);fill-opacity:.5;stroke:none}
+.door .hitpad,.win .hitpad{fill:transparent;stroke:none;cursor:grab}
+.door.sel .leaf,.door.sel .arc,.win.sel .pane{stroke:var(--wall);stroke-dasharray:3 2}
+.door.bad .swing{fill:var(--shade-3)}
+.frame{fill:var(--frame);stroke:var(--wall)}
+.back{fill:url(#grid)}
+.shelf{fill:var(--frame);stroke:var(--line)}
+.box rect{fill:var(--shade-2);stroke:var(--line);cursor:grab}
+.box text{fill:var(--ink);pointer-events:none;font-family:var(--sans)}
+.box.sel rect{fill:var(--shade-3)}
+.box.bad rect{stroke-dasharray:3 2}
+.sbox rect{fill:var(--shade-2);fill-opacity:.8;stroke:var(--line);cursor:grab}
+.sbox.far rect{fill:var(--behind);fill-opacity:1;stroke-dasharray:5 3}
+.sbox.sel rect{fill:var(--pick);fill-opacity:1;stroke:var(--ink);stroke-dasharray:none}
+#cv .sbox.sel rect{stroke-width:2px}
+.sbox.sel text{fill:var(--ink);font-weight:600}
+.sbox.bad rect{stroke-dasharray:3 2}
+.sbox text{fill:var(--ink);font-family:var(--sans);pointer-events:none}
+.sbox.far text{fill:var(--ink-2)}
+.vlabel{fill:var(--ink);font-family:var(--sans);font-weight:600}
+.ghost{fill:var(--shade-3);fill-opacity:.4;stroke:var(--line);stroke-dasharray:4 3;pointer-events:none}
+.cell{fill:transparent;cursor:pointer;stroke:none}
+.cell:hover{fill:var(--shade);fill-opacity:.7}
+.cell.on{fill:var(--shade-2);fill-opacity:.7;stroke:var(--line);stroke-dasharray:3 2}
+.cellno{fill:var(--ink);font-family:var(--sans);font-weight:600;pointer-events:none}
+.celldim{fill:var(--ink-2);font-family:var(--mono);pointer-events:none}
+.divg .hitpad{fill:transparent;stroke:none}
+.divg.h{cursor:ns-resize}.divg.v{cursor:ew-resize}
+.divg:hover .shelf,.divg.on .shelf{fill:var(--shade-3)}
+.splits{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.split,.shape{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border:1px solid var(--rule);border-radius:8px;background:var(--sheet);color:var(--ink);font:500 13px var(--sans);cursor:pointer}
+.split:hover,.shape:hover{border-color:var(--line);background:var(--hover)}
+.shape[aria-pressed="true"]{border-color:var(--line);background:var(--shade-2)}
+.split svg,.shape svg{width:40px;height:40px}
+.split svg rect,.shape svg path{fill:var(--shade);stroke:var(--line);stroke-width:2}
+.split svg line{stroke:var(--wall);stroke-width:4}
+.split small{font-weight:400;color:var(--ink-2);font-size:11.5px}
+.shapes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.shape{padding:8px 4px;font-size:12px;gap:4px}
+.cellhead{display:flex;align-items:center;gap:8px}
+.badge{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:var(--shade-2);color:var(--ink);font:600 12px var(--mono)}
+.plans .grp{font-size:11.5px;color:var(--ink-2);white-space:nowrap;padding-left:8px;margin-left:2px;border-left:1px solid var(--rule)}
+.plans .grp:first-of-type{border-left:0;padding-left:0}
+.mgr-back{position:fixed;inset:0;background:rgb(0 0 0 / .2);display:flex;justify-content:center;align-items:flex-start;padding:calc(24px + env(safe-area-inset-top, 0px)) 16px 24px;z-index:20}
+.mgr{background:var(--sheet);border:1px solid var(--line);border-radius:14px;width:100%;max-width:520px;max-height:calc(100% - 8px);padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 40px rgb(0 0 0 / .12);overflow:hidden}
+.mgr-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.mgr-head h2{margin:0;font-size:17px;font-weight:600}
+.mgr .sorts{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--paper);border-radius:10px;padding:4px}
+.mgr .sorts button{border:0;background:none;color:var(--ink-2);font:500 13.5px var(--sans);padding:9px 4px;border-radius:7px;cursor:pointer}
+.mgr .sorts button:hover{background:var(--sheet);color:var(--ink)}
+.mrows{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none;overflow-y:auto;min-height:0;flex:1 1 auto}
+.mrow{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:6px;align-items:center;padding:4px 6px 4px 2px;border:1px solid var(--rule);border-radius:10px;background:var(--sheet)}
+.mrow.cur{border-color:var(--line)}
+.mrow.on{background:var(--shade-2);border-color:var(--wall)}
+.mrow.dragging{opacity:.6;border-style:dashed}
+.handle{cursor:grab;color:var(--ink-2);font-size:18px;text-align:center;touch-action:none;user-select:none;-webkit-user-select:none;line-height:44px}
+.mpick{display:grid;grid-template-columns:24px minmax(0,1fr);grid-template-rows:auto auto;column-gap:8px;align-items:center;text-align:left;border:0;background:none;color:var(--ink);padding:8px 2px;min-height:52px;cursor:pointer;font-family:var(--sans)}
+.tick{grid-row:1 / 3;width:22px;height:22px;border-radius:6px;border:1.5px solid var(--line);display:grid;place-items:center;font-size:14px;font-weight:700;color:var(--ink);background:var(--sheet)}
+.mrow.on .tick{background:var(--wall);border-color:var(--wall);color:var(--sheet)}
+.mname{font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msub{font-size:12px;color:var(--ink-2);font-family:var(--mono);display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap}
+.gtag{font-family:var(--sans);font-size:11.5px;padding:0 7px;border-radius:99px;background:var(--shade-2);color:var(--ink)}
+.mv{display:flex;gap:4px}
+.mv button{border:1px solid var(--rule);background:var(--sheet);color:var(--ink-2);width:40px;height:40px;border-radius:8px;cursor:pointer;font-size:16px}
+.mv button:hover{color:var(--ink);border-color:var(--line)}
+.mv button:disabled{opacity:.3;cursor:default}
+.mgr-foot{display:flex;flex-direction:column;gap:10px;padding-top:12px;border-top:1px solid var(--rule)}
+.selbar{display:flex;align-items:center;gap:14px;font-size:14px}
+.selbar b{margin-right:auto;font-weight:600}
+.link{border:0;background:none;color:var(--ink-2);font:500 13px var(--sans);text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:6px 0}
+.gpick{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lbl2{width:100%;font-size:12px;color:var(--ink-2)}
+.gchip{border:1px solid var(--line);background:var(--sheet);color:var(--ink);font:500 14px var(--sans);padding:8px 14px;border-radius:99px;cursor:pointer;min-height:40px}
+.gchip:hover{background:var(--shade)}
+.gchip.add{border-style:dashed}
+.gchip.off{color:var(--ink-2)}
+.newg{display:flex;gap:6px;flex:1 1 220px;min-width:0}
+.newg input{flex:1;min-width:0;font:15px var(--sans);border-radius:99px;padding:8px 14px}
+.btn.wide{width:100%;padding:11px;font-size:14px}
+.btn:disabled{opacity:.6;cursor:default}
+@media (max-width:600px){
+  .mgr-back{align-items:flex-end;padding:0}
+  .mgr{max-width:none;border-radius:16px 16px 0 0;border-bottom:0;max-height:92%;padding:16px 16px calc(16px + env(safe-area-inset-bottom, 0px))}
+}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--sheet);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:13px;box-shadow:0 4px 16px rgb(0 0 0 / .08)}
+/* 선 두께: 방 벽·가구 바깥 틀만 굵게, 나머지는 그 절반으로 통일 */
+#cv :not(pattern) > :is(rect,path,line,polygon,polyline){vector-effect:non-scaling-stroke;stroke-width:1.5px}
+#cv .wall,#cv .frame{stroke-width:3px}
+#cv text{stroke-width:0}
+#cv text.halo{stroke-width:5px;vector-effect:non-scaling-stroke}
+.gmin{stroke:var(--grid)}.gmaj{stroke:var(--grid-major)}
+@media (prefers-reduced-motion:no-preference){.btn,.list button,.chip{transition:background .12s,border-color .12s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>룸 스케일<small>단위 cm</small></h1>
+    <nav class="tabs" aria-label="보기 전환">
+      <button id="tab-room" type="button" data-act="view-room">방 배치</button>
+      <button id="tab-inner" type="button" data-act="view-inner">가구 속 정리</button>
+    </nav>
+  </header>
+  <div class="plans" id="plans" aria-label="배치안"></div>
+  <div class="layout">
+    <section class="stage">
+      <div class="stage-head"><b id="stage-title"></b><span class="scale" id="scale"></span>
+        <span class="zoom" id="zoombar"><button class="hbtn sm" data-act="zoom-out" aria-label="작게 보기">−</button><button class="hbtn sm zl" id="zoomlbl" data-act="zoom-fit" title="화면에 맞추기">100%</button><button class="hbtn sm" data-act="zoom-in" aria-label="크게 보기">+</button></span>
+        <span class="hist"><button class="hbtn" id="helpbtn" data-act="help" aria-pressed="false" aria-label="도움말">?</button><button class="hbtn" id="undo" data-act="undo" title="되돌리기 (Ctrl/⌘+Z)" aria-label="되돌리기">↶<span> 되돌리기</span></button><button class="hbtn" id="redo" data-act="redo" title="다시 (Ctrl/⌘+Shift+Z)" aria-label="다시">↷<span> 다시</span></button></span></div>
+      <div class="cvwrap" id="cvwrap"><svg id="cv" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="compare" id="compare" hidden></div>
+      <div class="tip" id="tip"></div>
+      <div class="hint" id="hint" hidden></div>
+    </section>
+    <aside id="panel"></aside>
+  </div>
+</div>
+<div class="mgr-back" id="mgr" hidden></div>
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+
+<script>
+const T = 1.8; // 선반·칸막이 두께 cm
+const SNAP_ROOM = 12, SNAP_BOX = 6; // 자석 거리 cm
+const KEY = 'room-planner-v1';
+const uid = () => Math.random().toString(36).slice(2, 9);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const r1 = v => Math.round(v * 10) / 10;
+
+// 칸 구조: 빈 칸 {} 또는 나눈 칸 {split:'h'(가로로, 선반)|'v'(세로로, 칸막이), at: 아래(왼쪽) 칸 크기, a: 아래/왼쪽, b: 위/오른쪽}
+const leaf = () => ({});
+function stack(sizes){ // 아래부터 칸 높이 목록 → 선반으로 쌓기
+  return sizes.length ? {split:'h', at:sizes[0], a:leaf(), b:stack(sizes.slice(1))} : leaf();
+}
+function sample(){
+  const box = (name,w,h,d,x,y)=>({id:uid(),name,w,h,d,x,y});
+  return {
+    example:true,
+    room:{w:340,d:290, openings:[{id:uid(),name:'방문',type:'door',wall:'bottom',pos:140,w:80,hinge:'start'},{id:uid(),name:'창문',type:'window',wall:'right',pos:185,w:90}]},
+    furniture:[
+      {id:uid(),name:'침대 (슈퍼싱글)',w:110,d:200,h:40,x:0,y:86,rot:0,inner:{w:100,h:20,d:190},layout:leaf(),boxes:[]},
+      {id:uid(),name:'코너렉',shape:'tri',w:40,d:40,h:150,x:0,y:0,rot:0,inner:{w:30,h:144,d:28},layout:stack([35, 35, 35]),boxes:[]},
+      {id:uid(),name:'옷장',w:100,d:58,h:200,x:100,y:0,rot:0,inner:{w:96,h:194,d:55},
+        layout:{split:'v', at:60, a:{split:'h', at:160, a:leaf(), b:leaf()}, b:stack([42, 40, 40])}, boxes:[
+        box('리빙박스 L',44,30,52,0,0), box('리빙박스 L',44,30,52,0,30), box('모자 바구니',30,18,35,0,161.8),
+        box('양말 바구니',30,22,40,61.8,0), box('속옷 바구니',30,22,40,61.8,43.8)]},
+      {id:uid(),name:'ㄱ자 책상',shape:'L',t1:60,t2:60,w:160,d:140,h:73,x:200,y:0,rot:90,inner:{w:116,h:12,d:55},layout:leaf(),boxes:[]},
+      {id:uid(),name:'3단 수납장',w:80,d:40,h:120,x:250,y:250,rot:180,inner:{w:76,h:114,d:37},layout:stack([37, 36.2]),boxes:[
+        box('리빙박스 M',36,26,35,0,0), box('리빙박스 M',36,26,35,36,0),
+        box('서류함',25,32,30,0,38.8), box('서류함',25,32,30,25,38.8), box('작은 바구니',20,15,30,0,76.8)]}
+    ]
+  };
+}
+function migrate(s){ // 예전 저장 형식(선반 목록, 열 목록) → 칸 구조
+  const fromShelves = sh => { const out = []; let prev = 0; for (const v of [...sh].sort((a,b)=>a-b)){ out.push(r1(v - prev)); prev = r1(v + T) } return stack(out) };
+  const fromCols = cs => cs.length === 1 ? fromShelves(cs[0].shelves) : {split:'v', at:cs[0].w, a:fromShelves(cs[0].shelves), b:fromCols(cs.slice(1))};
+  s.room.openings = s.room.openings || [];
+  for (const f of s.furniture) if (f.innerAuto === undefined){ // 예전 데이터: 겉 치수와 안 맞으면 자동으로 맞춤
+    const I = f.inner, A = autoInner(f), old = {w:r1(f.w - 3.6), h:r1(f.h - 3.6), d:r1(f.d - 2)};
+    const stale = I.w > f.w || I.h > f.h || I.d > f.d || f.w - I.w > 15 || f.h - I.h > 15 || f.d - I.d > 15;
+    const same = (a, b) => Math.abs(a.w - b.w) < .6 && Math.abs(a.h - b.h) < .6 && Math.abs(a.d - b.d) < .6;
+    f.innerAuto = stale || same(I, A) || same(I, old);
+  }
+  for (const f of s.furniture){
+    if (!f.layout){ f.layout = f.cols ? fromCols(f.cols) : fromShelves(f.shelves || []) }
+    delete f.cols; delete f.shelves;
+  }
+  return s;
+}
+// ---------- 배치안 저장: 이 브라우저 + 계정 백업 ----------
+const KEY2 = 'room-planner-v2';
+const clone = o => JSON.parse(JSON.stringify(o));
+const makePlan = (name, d) => ({id:uid(), name, updatedAt:Date.now(), room:d.room, furniture:d.furniture, example:!!d.example});
+function loadStore(){
+  try{ const st = JSON.parse(localStorage.getItem(KEY2)); if (st && st.plans && st.plans.length){ st.plans.forEach(migrate); if (!st.plans.some(q => q.id === st.current)) st.current = st.plans[0].id; return st } }catch(e){}
+  let old = null; try{ old = JSON.parse(localStorage.getItem(KEY)) }catch(e){}
+  const pl = makePlan('A안', old && old.room ? migrate(old) : sample()); return {current:pl.id, plans:[pl]};
+}
+let STORE = loadStore();
+let S = STORE.plans.find(q => q.id === STORE.current);
+setTimeout(() => H(S));
+function persistLocal(){ try{ localStorage.setItem(KEY2, JSON.stringify(STORE)) }catch(e){} }
+// 되돌리기: 배치안마다 바뀌기 전 모습을 최대 100단계까지 기억 (이 화면을 열어 둔 동안)
+const hist = {};
+const snapOf = q => JSON.stringify({room:q.room, furniture:q.furniture});
+const HKEY = 'room-planner-hist';
+let savedHist = {}; try{ savedHist = JSON.parse(localStorage.getItem(HKEY)) || {} }catch(e){}
+const H = q => hist[q.id] || (hist[q.id] = {u:(savedHist[q.id]?.u || []).slice(-100), r:savedHist[q.id]?.r || [], last:snapOf(q), t:0});
+function persistHist(){ // 새로고침해도 되돌리기 기록 유지 (배치안마다 최근 30단계)
+  const o = {}; for (const k in hist) if (STORE.plans.some(q => q.id === k)) o[k] = {u:hist[k].u.slice(-30), r:hist[k].r.slice(-30)};
+  try{ localStorage.setItem(HKEY, JSON.stringify(o)) }catch(e){ try{ for (const k in o){ o[k].u = o[k].u.slice(-5); o[k].r = [] } localStorage.setItem(HKEY, JSON.stringify(o)) }catch(e2){} }
+}
+function save(typing){
+  const h = H(S), cur = snapOf(S), now = Date.now();
+  if (cur !== h.last){
+    if (!(typing && now - h.t < 900)){ h.u.push(h.last); if (h.u.length > 100) h.u.shift() } // 연달아 타이핑은 한 단계로
+    h.t = now; h.r = []; h.last = cur;
+  }
+  S.updatedAt = now; persistLocal(); cloudQueue(S); undoBtns(); persistHist();
+}
+function undoBtns(){ const h = H(S), u = document.getElementById('undo'), r = document.getElementById('redo'); if (u) u.disabled = !h.u.length; if (r) r.disabled = !h.r.length }
+function applySnap(js){
+  const o = JSON.parse(js), h = H(S); S.room = o.room; S.furniture = o.furniture; h.last = js; h.t = 0;
+  S.updatedAt = Date.now(); persistLocal(); cloudQueue(S);
+  if (!getF(sel)) sel = S.furniture[0]?.id || null;
+  const f = getF(sel);
+  if (f && !f.boxes.some(b => b.id === selBox)) selBox = null;
+  if (!S.room.openings.some(o => o.id === selOpen)) selOpen = null;
+  if (f && selCell !== null && !geo(f).cells.some(c => c.path === selCell)) selCell = null;
+  if (view === 'inner' && !f) view = 'room';
+  drag = null; renderAll(); persistHist();
+}
+function undo(){ const h = H(S); if (!h.u.length) return; h.r.push(snapOf(S)); applySnap(h.u.pop()); toast('되돌렸어요') }
+function redo(){ const h = H(S); if (!h.r.length) return; h.u.push(snapOf(S)); applySnap(h.r.pop()); toast('다시 적용했어요') }
+let newShape = 'rect', sideX = 0;
+let view = 'room', sel = S.furniture[2]?.id || S.furniture[0]?.id || null, selBox = null, selCell = null, selOpen = null, armed = null, drag = null;
+const svg = document.getElementById('cv'), panel = document.getElementById('panel');
+const getF = id => S.furniture.find(f => f.id === id);
+const fp = f => (f.rot % 180 ? {w:f.d, d:f.w} : {w:f.w, d:f.d});
+const hit = (a, b) => a.x < b.x + b.w - 0.01 && b.x < a.x + a.w - 0.01 && a.y < b.y + b.d - 0.01 && b.y < a.y + a.d - 0.01;
+const zOver = (a, b) => (a.z || 0) < (b.z || 0) + b.d - 0.01 && (b.z || 0) < (a.z || 0) + a.d - 0.01; // 앞뒤로 겹치는지
+const hitBox = (a, b) => a.x < b.x + b.w - 0.01 && b.x < a.x + a.w - 0.01 && a.y < b.y + b.h - 0.01 && b.y < a.y + a.h - 0.01 && zOver(a, b);
+const hitDiv = (b, d) => b.x < d.x1 - 0.01 && d.x0 < b.x + b.w - 0.01 && b.y < d.y1 - 0.01 && d.y0 < b.y + b.h - 0.01;
+const xOver = (b, x0, x1) => b.x < x1 - 0.01 && x0 < b.x + b.w - 0.01;
+const colorIdx = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 4 };
+const fIdx = f => S.furniture.indexOf(f) % 4;
+const node = (f, path) => { let n = f.layout; for (const ch of path){ if (!n || !n.split) return null; n = n[ch] } return n };
+
+// 칸과 칸막이의 실제 위치 (y는 바닥에서 위로)
+function geo(f){
+  const cells = [], divs = [];
+  (function walk(n, p, x0, x1, y0, y1){
+    if (!n.split){ cells.push({path:p, x0, x1, bottom:y0, top:y1, name:n.name || ''}); return }
+    if (n.split === 'h'){
+      n.at = clamp(n.at, 1, Math.max(1, r1(y1 - y0 - T - 1))); const m = r1(y0 + n.at);
+      divs.push({path:p, dir:'h', x0, x1, y0:m, y1:r1(m + T), r:{x0, x1, y0, y1}});
+      walk(n.a, p + 'a', x0, x1, y0, m); walk(n.b, p + 'b', x0, x1, r1(m + T), y1);
+    } else {
+      n.at = clamp(n.at, 1, Math.max(1, r1(x1 - x0 - T - 1))); const m = r1(x0 + n.at);
+      divs.push({path:p, dir:'v', x0:m, x1:r1(m + T), y0, y1, r:{x0, x1, y0, y1}});
+      walk(n.a, p + 'a', x0, m, y0, y1); walk(n.b, p + 'b', r1(m + T), x1, y0, y1);
+    }
+  })(f.layout, '', 0, f.inner.w, 0, f.inner.h);
+  cells.sort((a, b) => a.bottom - b.bottom || a.x0 - b.x0).forEach((c, i) => c.no = i + 1);
+  return {cells, divs};
+}
+function boxIssues(f, b, G = geo(f)){
+  const out = [];
+  if (b.d > f.inner.d) out.push('깊이 ' + r1(b.d - f.inner.d) + 'cm 초과');
+  if (b.w > f.inner.w) out.push('너비 초과');
+  if (G.divs.some(d => d.dir === 'h' && hitDiv(b, d))) out.push('높이 초과');
+  if (G.divs.some(d => d.dir === 'v' && hitDiv(b, d))) out.push('칸막이에 걸림');
+  if (f.boxes.some(o => o !== b && hitBox(o, b))) out.push('겹침');
+  return out;
+}
+// ---------- 가구 모양: 네모 / ㄱ자 / 삼각형(코너) ----------
+// 로컬 좌표(돌리기 전): 가로 w × 깊이 d, ㄱ자와 삼각형은 왼쪽 위 모서리가 꺾이는 곳
+const armA = f => clamp(f.t1 || 60, 1, f.d), armB = f => clamp(f.t2 || 60, 1, f.w);
+function localPieces(f){ const {w, d} = f;
+  if (f.shape === 'tri') return [[[0,0],[w,0],[0,d]]];
+  if (f.shape === 'L'){ const a = armA(f), b = armB(f); return [[[0,0],[w,0],[w,a],[0,a]], [[0,a],[b,a],[b,d],[0,d]]] }
+  return [[[0,0],[w,0],[w,d],[0,d]]];
+}
+function localOutline(f){ const {w, d} = f;
+  if (f.shape === 'tri') return [[0,0],[w,0],[0,d]];
+  if (f.shape === 'L'){ const a = armA(f), b = armB(f); return [[0,0],[w,0],[w,a],[b,a],[b,d],[0,d]] }
+  return [[0,0],[w,0],[w,d],[0,d]];
+}
+function localFront(f, i){ const {w, d} = f; // 앞면 표시: 앞쪽 변 안쪽에 겹선
+  if (f.shape === 'tri'){ const k = Math.max(0.1, 1 - i * Math.hypot(w, d) / (w * d)); return [[w*k, 0],[0, d*k]] }
+  if (f.shape === 'L'){ const a = armA(f), b = armB(f); return [[w, a - i],[b - i, a - i],[b - i, d]] }
+  return [[0, d - i],[w, d - i]];
+}
+function localLabel(f){ const {w, d} = f;
+  if (f.shape === 'tri') return [w / 3, d / 3];
+  if (f.shape === 'L'){ const a = armA(f), b = armB(f); return w * a >= b * (d - a) ? [w / 2, a / 2] : [b / 2, (a + d) / 2] }
+  return [w / 2, d / 2];
+}
+function rot(f, pt){ let [x, y] = pt, W = f.w, D = f.d; for (let k = 0; k < (f.rot / 90 | 0); k++){ [x, y] = [D - y, x]; [W, D] = [D, W] } return [x, y] }
+const toRel = (f, pts) => pts.map(p => rot(f, f.flip ? [f.w - p[0], p[1]] : p)); // 좌우 뒤집기 후 돌리기
+const pieces = f => localPieces(f).map(P => toRel(f, P).map(([x, y]) => [x + f.x, y + f.y]));
+const bbox = P => ({x0:Math.min(...P.map(p=>p[0])), x1:Math.max(...P.map(p=>p[0])), y0:Math.min(...P.map(p=>p[1])), y1:Math.max(...P.map(p=>p[1]))});
+function convexHit(P, Q){ // 볼록 다각형끼리 겹침 (분리축)
+  for (const poly of [P, Q]) for (let i = 0; i < poly.length; i++){
+    const a = poly[i], b = poly[(i + 1) % poly.length], ax = -(b[1] - a[1]), ay = b[0] - a[0];
+    const pr = R => R.map(p => p[0] * ax + p[1] * ay), pa = pr(P), pq = pr(Q), len = Math.hypot(ax, ay) || 1;
+    if (Math.max(...pa) - Math.min(...pq) <= 0.05 * len || Math.max(...pq) - Math.min(...pa) <= 0.05 * len) return false;
+  }
+  return true;
+}
+function furnIssues(f){
+  const A = pieces(f);
+  return S.furniture.some(o => o !== f && pieces(o).some(Q => A.some(P => convexHit(P, Q))));
+}
+// ---------- 문·창문 ----------
+const WALLS = {top:'위', right:'오른쪽', bottom:'아래', left:'왼쪽'};
+function wallGeom(R, wall){
+  if (wall === 'top') return {len:R.w, P:t => [t, 0], u:[1, 0], n:[0, 1]};
+  if (wall === 'bottom') return {len:R.w, P:t => [t, R.d], u:[1, 0], n:[0, -1]};
+  if (wall === 'left') return {len:R.d, P:t => [0, t], u:[0, 1], n:[1, 0]};
+  return {len:R.d, P:t => [R.w, t], u:[0, 1], n:[-1, 0]};
+}
+const add2 = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k];
+function doorSwing(R, o){ // 경첩 H에서 문짝이 방 안쪽으로 90° 열리는 부채꼴
+  const g = wallGeom(R, o.wall), th = o.hinge === 'end' ? o.pos + o.w : o.pos, to = o.hinge === 'end' ? o.pos : o.pos + o.w;
+  const H = g.P(th), sd = Math.sign(to - th), s = [g.u[0] * sd, g.u[1] * sd], arc = [];
+  for (let k = 0; k <= 12; k++){ const a = k / 12 * Math.PI / 2; arc.push(add2(H, [g.n[0] * Math.cos(a) + s[0] * Math.sin(a), g.n[1] * Math.cos(a) + s[1] * Math.sin(a)], o.w)) }
+  return {H, arc, poly:[H, ...arc]};
+}
+function openIssue(o){
+  if (o.type !== 'door') return false;
+  const sw = doorSwing(S.room, o).poly;
+  return S.furniture.some(f => pieces(f).some(P => convexHit(P, sw)));
+}
+const shapeIco = {
+  rect:'<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M6 10H34V30H6Z"/></svg>',
+  L:'<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M6 6H34V16H16V34H6Z"/></svg>',
+  tri:'<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M6 6H34L6 34Z"/></svg>'};
+const shapeName = {rect:'네모', L:'ㄱ자', tri:'코너 삼각'};
+function settle(f, b, G = geo(f)){ // 아래로 떨어뜨려 바닥/선반/다른 상자 위에 얹기
+  const surf = [0];
+  for (const d of G.divs) if (d.dir === 'h' && xOver(b, d.x0, d.x1)) surf.push(d.y1);
+  for (const o of f.boxes) if (o !== b && xOver(b, o.x, o.x + o.w) && zOver(b, o)) surf.push(r1(o.y + o.h));
+  const under = surf.filter(s => s <= b.y + b.h * 0.5 + 0.01); // 절반 이상 위에 있으면 그 위에 얹힘
+  b.y = under.length ? Math.max(...under) : 0;
+}
+function autoPlace(f, b){
+  const G = geo(f);
+  for (const c of G.cells){
+    const ys = [c.bottom, ...f.boxes.map(o => r1(o.y + o.h)).filter(y => y > c.bottom && y < c.top)].sort((a,b)=>a-b);
+    for (const y of ys){
+      if (y + b.h > c.top + 0.01) continue;
+      for (let x = c.x0; x + b.w <= c.x1 + 0.01; x = r1(x + 1)){
+        const t = {...b, x, y};
+        if (f.boxes.some(o => hitBox(o, t))) continue;
+        const s = {...t}; settle(f, s, G);
+        if (Math.abs(s.y - y) < 0.05){ b.x = x; b.y = y; return true }
+      }
+    }
+  }
+  b.x = 0; b.y = 0; return false;
+}
+function settleAll(f){ const G = geo(f); [...f.boxes].sort((a, b) => a.y - b.y).forEach(b => settle(f, b, G)) }
+// 안쪽 치수: 기본은 겉 치수에서 판 두께를 빼서 자동으로 맞춤. 직접 고치면 그 값을 유지
+const autoInner = f => ({w:Math.max(1, r1(f.w - 2 * T)), h:Math.max(1, r1(f.h - 2 * T)), d:Math.max(1, r1(f.d - T))});
+function syncInner(f){ if (f.innerAuto !== false) Object.assign(f.inner, autoInner(f)) }
+function normalize(){
+  for (const f of S.furniture) syncInner(f);
+  const R = S.room;
+  for (const o of R.openings){ const len = wallGeom(R, o.wall).len; o.w = clamp(o.w, 10, len); o.pos = clamp(o.pos, 0, r1(len - o.w)) }
+  for (const f of S.furniture){ const p = fp(f); f.x = clamp(f.x, 0, Math.max(0, R.w - p.w)); f.y = clamp(f.y, 0, Math.max(0, R.d - p.d));
+    for (const b of f.boxes){ b.x = clamp(b.x, 0, Math.max(0, f.inner.w - b.w)); b.y = clamp(b.y, 0, Math.max(0, f.inner.h - b.h)); b.z = clamp(b.z || 0, 0, Math.max(0, r1(f.inner.d - b.d))) } }
+}
+// 칸 하나의 너비/높이를 바꾸면 가장 가까운 칸막이(선반)가 움직임. 그런 칸막이가 없으면 가구 안쪽 치수가 바뀜
+function setCellSize(f, path, dim, v){
+  const c = geo(f).cells.find(c => c.path === path); if (!c) return;
+  const cur = dim === 'w' ? c.x1 - c.x0 : c.top - c.bottom, delta = v - cur, dir = dim === 'w' ? 'v' : 'h';
+  for (let i = path.length - 1; i >= 0; i--){
+    const anc = node(f, path.slice(0, i));
+    if (anc.split === dir){ anc.at = r1(path[i] === 'a' ? anc.at + delta : anc.at - delta); return }
+  }
+  f.innerAuto = false;
+  if (dim === 'w') f.inner.w = r1(f.inner.w + delta); else f.inner.h = r1(f.inner.h + delta);
+}
+
+function gridDefs(minor, major, sw, idp = ''){
+  return `<defs><pattern id="${idp}gmin" width="${minor}" height="${minor}" patternUnits="userSpaceOnUse"><path d="M ${minor} 0 L 0 0 0 ${minor}" class="gmin" fill="none" stroke-width="${sw}"/></pattern>
+  <pattern id="${idp}grid" width="${major}" height="${major}" patternUnits="userSpaceOnUse"><rect width="${major}" height="${major}" fill="url(#${idp}gmin)"/><path d="M ${major} 0 L 0 0 0 ${major}" class="gmaj" fill="none" stroke-width="${sw*1.6}"/></pattern></defs>`;
+}
+
+// 휴대폰처럼 좁은 화면에서는 글자가 너무 작아지지 않게 기준 크기를 키움 (화면에서 약 13px 이상)
+const ppu = vbW => (svg.clientWidth || (svg.parentNode && svg.parentNode.clientWidth) || 800) / vbW;
+function setVB(x, y, w, h){ svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`); svg.style.aspectRatio = `${w} / ${h}` }
+const svgW = () => svg.clientWidth || (svg.parentNode && svg.parentNode.clientWidth) || 800;
+function buildRoom(idp = '', pxW = 0){ // 방 평면도 그림 (비교 화면에서도 씀)
+  const R = S.room, W = pxW || svgW(); let base = Math.max(R.w, R.d) / 45; base = Math.max(base, 13 / (W / (R.w + base * 6.8))); const m = base * 3.4;
+  const vb = [-m, -m, R.w + m * 2, R.d + m * 2], px = W / vb[2], minF = 11 / px;
+  let h = gridDefs(10, 50, base * 0.05, idp);
+  h += `<rect class="floor" x="0" y="0" width="${R.w}" height="${R.d}" style="fill:url(#${idp}grid)"/>`;
+  const ty = -m * 0.5, tx = -m * 0.5, tk = base * 0.4;
+  h += `<path class="dimln" stroke-width="${base*0.08}" d="M0 ${ty} H${R.w} M0 ${ty-tk} V${ty+tk} M${R.w} ${ty-tk} V${ty+tk} M${tx} 0 V${R.d} M${tx-tk} 0 H${tx+tk} M${tx-tk} ${R.d} H${tx+tk}"/>`;
+  h += `<text x="${R.w/2}" y="${ty - base*0.5}" text-anchor="middle" font-size="${base*1.1}" style="paint-order:stroke" stroke="var(--sheet)" class="dimtxt halo">${R.w} cm</text>`;
+  h += `<text class="dimtxt" transform="translate(${tx - base*0.5} ${R.d/2}) rotate(-90)" text-anchor="middle" font-size="${base*1.1}">${R.d} cm</text>`;
+  for (const f of S.furniture){
+    const p = fp(f), bad = furnIssues(f), small = f.shape === 'tri' ? 0.6 : f.shape === 'L' ? Math.min(armA(f), armB(f)) / Math.min(f.w, f.d) : 1;
+    const fs = clamp(Math.min(p.w, p.d) * small / 5.5, base * 0.7, base * 1.2), pts = P => P.map(q => q.map(r1).join(',')).join(' ');
+    const [lx, ly] = toRel(f, [localLabel(f)])[0];
+    // 글자가 가구 밖으로 나가지 않게: 들어갈 자리를 재서 크기를 맞추고, 작은 가구는 이름만 (고르면 다 보여줌)
+    const lp = localPieces(f).map(P => bbox(toRel(f, P))), lb = lp.find(b => lx >= b.x0 - .1 && lx <= b.x1 + .1 && ly >= b.y0 - .1 && ly <= b.y1 + .1) || lp[0];
+    const shrink = f.shape === 'tri' ? 0.45 : 0.9, aW = (lb.x1 - lb.x0) * shrink, aH = (lb.y1 - lb.y0) * shrink, isSel = f.id === sel;
+    let fsN = Math.min(fs, aW / (f.name.length * 0.95 + 0.3)), label = f.name, halo = false;
+    if (fsN < minF){ fsN = minF; const n = Math.floor(aW / (minF * 0.95));
+      if (isSel) halo = true; else label = n >= f.name.length ? f.name : n >= 2 ? f.name.slice(0, n - 1) + '…' : '' }
+    const dims = `${f.w}×${f.d}×${f.h}`, fsD = Math.max(minF * 0.92, fsN * 0.82);
+    const dimsFit = aH > fsN * 2.5 && dims.length * 0.62 * fsD <= aW, showDims = dimsFit || isSel; if (isSel && !dimsFit) halo = true;
+    h += `<g class="furn${f.id===sel?' sel':''}${bad?' bad':''}" data-fid="${f.id}" transform="translate(${f.x} ${f.y})">
+      <polygon class="body" points="${pts(toRel(f, localOutline(f)))}"/>
+      <polyline class="front" points="${pts(toRel(f, localFront(f, base * 0.7)))}"/>
+      ${label ? `<text${halo ? ' class="halo"' : ''} x="${lx}" y="${showDims ? ly - fsN * 0.15 : ly + fsN * 0.35}" text-anchor="middle" font-size="${fsN}" font-weight="600">${esc(label)}</text>` : ''}
+      ${showDims ? `<text${halo ? ' class="halo"' : ''} x="${lx}" y="${ly + fsN * 0.2 + fsD * 1.1}" text-anchor="middle" font-size="${fsD}" style="font-family:var(--mono)">${dims}</text>` : ''}</g>`;
+  }
+  h += `<rect class="wall" x="0" y="0" width="${R.w}" height="${R.d}"/>`; // 방 테두리는 가구 위에
+  const th = base * 0.7, pts = P => P.map(q => q.map(r1).join(',')).join(' ');
+  for (const o of R.openings){
+    const g = wallGeom(R, o.wall), A = g.P(o.pos), B = g.P(o.pos + o.w), on = o.id === selOpen;
+    const band = (k) => [add2(A, g.n, -k), add2(B, g.n, -k), add2(B, g.n, k), add2(A, g.n, k)];
+    h += `<g class="${o.type === 'door' ? 'door' : 'win'}${on ? ' sel' : ''}${openIssue(o) ? ' bad' : ''}" data-oid="${o.id}">`;
+    if (o.type === 'door'){
+      const sw = doorSwing(R, o);
+      h += `<polygon class="swing" points="${pts(sw.poly)}"/><polygon class="gap" points="${pts(band(th / 2 + 0.3))}"/>
+        <line class="leaf" x1="${sw.H[0]}" y1="${sw.H[1]}" x2="${sw.arc[0][0]}" y2="${sw.arc[0][1]}"/><polyline class="arc" points="${pts(sw.arc)}"/>
+        <polygon class="hitpad" points="${pts(sw.poly)}"/>`;
+    } else {
+      h += `<polygon class="gap" points="${pts(band(th / 2 + 0.3))}"/>
+        <line class="pane" x1="${add2(A, g.n, -th/4)[0]}" y1="${add2(A, g.n, -th/4)[1]}" x2="${add2(B, g.n, -th/4)[0]}" y2="${add2(B, g.n, -th/4)[1]}"/>
+        <line class="pane" x1="${add2(A, g.n, th/4)[0]}" y1="${add2(A, g.n, th/4)[1]}" x2="${add2(B, g.n, th/4)[0]}" y2="${add2(B, g.n, th/4)[1]}"/>
+        <polygon class="hitpad" points="${pts(band(th * 1.6))}"/>`;
+    }
+    { const M = add2(g.P(o.pos + o.w / 2), g.n, base * 1.5), anc = o.wall === 'left' ? 'start' : o.wall === 'right' ? 'end' : 'middle';
+      h += `<text class="olabel halo" x="${M[0]}" y="${M[1] + base * 0.3}" text-anchor="${anc}" font-size="${base * 0.85}">${esc(o.name || (o.type === 'door' ? '문' : '창문'))}</text>` }
+    for (const J of [A, B]) h += `<line class="jamb" x1="${add2(J, g.n, -th/2)[0]}" y1="${add2(J, g.n, -th/2)[1]}" x2="${add2(J, g.n, th/2)[0]}" y2="${add2(J, g.n, th/2)[1]}"/>`;
+    h += `</g>`;
+  }
+  // 통로 폭: 고른 가구에서 벽·옆 가구까지 남은 거리
+  const cf = !idp && getF(sel);
+  if (cf){
+    const B = bbox(pieces(cf).flat()), others = S.furniture.filter(o => o !== cf).flatMap(o => pieces(o).map(bbox)).filter(q => !(q.x0 < B.x1 - .5 && B.x0 < q.x1 - .5 && q.y0 < B.y1 - .5 && B.y0 < q.y1 - .5));
+    const yo = q => q.y0 < B.y1 - .5 && B.y0 < q.y1 - .5, xo = q => q.x0 < B.x1 - .5 && B.x0 < q.x1 - .5;
+    const cy = (B.y0 + B.y1) / 2, cx = (B.x0 + B.x1) / 2, fsC = Math.max(minF, base * 0.85), tk = base * 0.35;
+    const L = Math.max(0, ...others.filter(q => yo(q) && q.x1 <= B.x0 + .5).map(q => q.x1)), Rt = Math.min(R.w, ...others.filter(q => yo(q) && q.x0 >= B.x1 - .5).map(q => q.x0));
+    const Tp = Math.max(0, ...others.filter(q => xo(q) && q.y1 <= B.y0 + .5).map(q => q.y1)), Bt = Math.min(R.d, ...others.filter(q => xo(q) && q.y0 >= B.y1 - .5).map(q => q.y0));
+    const seg = (x1, y1, x2, y2, hor) => { const g = hor ? Math.abs(x2 - x1) : Math.abs(y2 - y1); if (g < 1) return '';
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      return `<g class="clr"><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><path d="${hor ? `M${x1} ${y1 - tk}V${y1 + tk}M${x2} ${y2 - tk}V${y2 + tk}` : `M${x1 - tk} ${y1}H${x1 + tk}M${x2 - tk} ${y2}H${x2 + tk}`}"/>
+        <text x="${hor ? mx : mx + fsC * 0.3}" y="${hor ? my - fsC * 0.35 : my + fsC * 0.35}" text-anchor="${hor ? 'middle' : 'start'}" font-size="${fsC}">${r1(g)}</text></g>` };
+    h += seg(L, cy, B.x0, cy, true) + seg(B.x1, cy, Rt, cy, true) + seg(cx, Tp, cx, B.y0, false) + seg(cx, B.y1, cx, Bt, false);
+  }
+  const bads = S.furniture.filter(furnIssues).map(f => f.name);
+  return {vb, h, bads, doorBad:R.openings.some(openIssue)};
+}
+function renderRoom(){
+  const r = buildRoom(); setVB(...r.vb); svg.innerHTML = r.h;
+  document.getElementById('stage-title').textContent = '방 평면도 (위에서 본 모습)';
+  document.getElementById('scale').textContent = `격자 10cm · 굵은 칸 50cm`;
+  setHints('가구를 끌어서 옮겨요. 고른 가구 둘레의 숫자는 벽·옆 가구까지 남은 거리(cm)예요.',
+    ['가구를 끌면 벽이나 옆 가구 12cm 안에서 착 붙고, 더 밀면 겹쳐요', '안쪽 겹선이 가구 앞면이에요', '가구를 두 번 누르거나 "속 정리하기"를 누르면 가구 속을 볼 수 있어요', '문·창문도 끌어서 다른 벽으로 옮길 수 있어요', '그림이 작으면 위의 + 버튼으로 크게 보고, 손가락으로 밀어서 둘러볼 수 있어요'],
+    [...(r.bads.length ? [`겹친 가구: ${r.bads.map(esc).join(', ')}`] : []), ...(r.doorBad ? ['문 열리는 자리에 가구가 있어요'] : [])], S.example ? '지금 보이는 건 예시 배치예요' : '');
+}
+let helpOpen = false; try{ helpOpen = localStorage.getItem('room-planner-help') === '1' }catch(e){}
+function setHints(tip, help, warns, extra = ''){
+  document.getElementById('tip').innerHTML = `<span>${tip}</span>` + (extra ? `<span>${extra}</span>` : '') + warns.map(w => `<span class="bad">${w}</span>`).join('');
+  const hi = document.getElementById('hint'); hi.innerHTML = help.map(x => `<span>· ${x}</span>`).join(''); hi.hidden = !helpOpen;
+  document.getElementById('helpbtn').setAttribute('aria-pressed', helpOpen);
+}
+
+function renderInner(){
+  const f = getF(sel); if (!f){ view = 'room'; return renderRoom() }
+  const I = f.inner, G = geo(f), Y = y => I.h - y; let base = Math.max(f.w, f.h) / 42;
+  base = Math.max(base, 12 / ppu(f.w + f.d + base * 12.2)); const m = base * 3.6;
+  // 겉 틀: 실제 겉 치수 그대로 (안쪽은 가운데)
+  const Fx = Math.max(0.6, (f.w - I.w) / 2), Fy = Math.max(0.6, (f.h - I.h) / 2), OW = I.w + Fx * 2, OH = I.h + Fy * 2, F = Math.max(Fx, Fy);
+  const gapS = Math.max(base * 5, 20), SX = I.w + Fx + gapS, DO = Math.max(f.d, I.d); // 옆모습은 오른쪽에
+  setVB(-Fx - m, -Fy - m, OW + gapS + DO + m * 2, OH + m * 2.6);
+  let h = gridDefs(10, 50, base * 0.05);
+  h += `<rect class="frame" x="${-Fx}" y="${-Fy}" width="${OW}" height="${OH}"/>`;
+  h += `<rect class="back" x="0" y="0" width="${I.w}" height="${I.h}"/>`;
+  const ty = -Fy - base * 1.4, tk = base * 0.4, tx = -Fx - base * 1.4, X0 = -Fx, X1 = I.w + Fx, Y0 = -Fy, Y1 = I.h + Fy;
+  h += `<path class="dimln" d="M${X0} ${ty} H${X1} M${X0} ${ty-tk} V${ty+tk} M${X1} ${ty-tk} V${ty+tk} M${tx} ${Y0} V${Y1} M${tx-tk} ${Y0} H${tx+tk} M${tx-tk} ${Y1} H${tx+tk}"/>`;
+  h += `<text class="dimtxt" x="${I.w/2}" y="${ty - base*0.5}" text-anchor="middle" font-size="${base}">가로 ${f.w}</text>`;
+  h += `<text class="dimtxt" transform="translate(${tx - base*0.5} ${I.h/2}) rotate(-90)" text-anchor="middle" font-size="${base}">높이 ${f.h}</text>`;
+  // 칸 (눌러서 고르기)
+  for (const c of G.cells){
+    const w = c.x1 - c.x0, hh = c.top - c.bottom, fs = clamp(Math.min(w / 6, hh / 3), base * 0.55, base * 0.95), on = c.path === selCell && !selBox;
+    h += `<rect class="cell${on ? ' on' : ''}" data-cell="${c.path}" x="${c.x0}" y="${Y(c.top)}" width="${w}" height="${hh}" stroke-width="${base*0.25}"/>`;
+    h += `<text class="cellno" x="${c.x0 + fs*0.5}" y="${Y(c.top) + fs*1.25}" font-size="${fs}">${c.no}</text>`;
+    if (c.name){ const nch = Math.max(1, Math.floor((w - fs) / (fs * 0.9))), nm = c.name.length > nch ? c.name.slice(0, Math.max(1, nch - 1)) + '…' : c.name;
+      if (hh > fs * 3.2) h += `<text class="cellname" x="${c.x0 + fs*0.5}" y="${Y(c.top) + fs*2.5}" font-size="${fs * 0.92}">${esc(nm)}</text>` }
+    h += `<text class="celldim" x="${c.x1 - fs*0.4}" y="${Y(c.top) + fs*1.25}" text-anchor="end" font-size="${fs*0.85}">${r1(w)}×${r1(hh)}</text>`;
+  }
+  // 선반·칸막이 (끌어서 옮기기)
+  for (const d of G.divs){
+    const pad = base * 0.9, on = drag && drag.div === d.path;
+    h += `<g class="divg ${d.dir}${on ? ' on' : ''}" data-div="${d.path}">
+      <rect class="hitpad" x="${d.x0 - (d.dir === 'v' ? pad : 0)}" y="${Y(d.y1) - (d.dir === 'h' ? pad : 0)}" width="${d.x1 - d.x0 + (d.dir === 'v' ? pad*2 : 0)}" height="${d.y1 - d.y0 + (d.dir === 'h' ? pad*2 : 0)}"/>
+      <rect class="shelf" x="${d.x0}" y="${Y(d.y1)}" width="${d.x1 - d.x0}" height="${d.y1 - d.y0}" stroke-width="${base*0.08}"/></g>`;
+  }
+  for (const b of [...f.boxes].sort((a, c) => (c.z || 0) - (a.z || 0))){ // 뒤쪽 박스부터 그려서 앞 박스가 위에
+    const bad = boxIssues(f, b, G).length, fs = clamp(Math.min(b.w / 5, b.h / 2.6), base * 0.55, base * 1.05);
+    const rows = Math.floor(I.d / b.d);
+    h += `<g class="box${b.id===selBox?' sel':''}${bad?' bad':''}" data-bid="${b.id}">
+      <rect class="k${colorIdx(b.name)}" x="${b.x}" y="${Y(b.y + b.h)}" width="${b.w}" height="${b.h}" rx="${base*0.25}" stroke-width="${base*(b.id===selBox?0.3:0.12)}"/>
+      <text x="${b.x + b.w/2}" y="${Y(b.y + b.h/2) - (b.h > fs*3 ? fs*0.2 : -fs*0.35)}" text-anchor="middle" font-size="${fs}" font-weight="600">${esc(b.name)}</text>
+      ${b.h > fs * 3 ? `<text x="${b.x + b.w/2}" y="${Y(b.y + b.h/2) + fs*1.05}" text-anchor="middle" font-size="${fs*0.8}" style="font-family:var(--mono)">${b.w}×${b.h}×${b.d}${b.z ? ' · 안쪽 ' + b.z : rows >= 2 ? ' · 앞뒤 ' + rows + '줄' : ''}</text>` : ''}</g>`;
+  }
+  // ---------- 옆모습 (보기만): 왼쪽이 앞, 오른쪽이 뒤 ----------
+  sideX = SX;
+  { const BK = Math.max(0.6, f.d - I.d), lb = Y1 + base * 1.6;
+    h += `<rect class="frame" x="${SX}" y="${-Fy}" width="${I.d + BK}" height="${OH}"/>`;
+    h += `<rect class="back" x="${SX}" y="0" width="${I.d}" height="${I.h}"/>`;
+    for (const d of G.divs) if (d.dir === 'h') h += `<rect class="shelf" x="${SX}" y="${Y(d.y1)}" width="${I.d}" height="${T}"/>`;
+    // 옆에서 보면 가로로 나란한 박스가 겹쳐 보임: 보는 쪽(오른쪽 옆판)에 가까운 박스를 위에, 그 뒤에 가린 박스는 진한 점선으로
+    const ovl = (a, c) => a.y < c.y + c.h - 0.01 && c.y < a.y + a.h - 0.01 && zOver(a, c);
+    const far = b => f.boxes.some(o => o !== b && o.x >= b.x + b.w - 0.01 && ovl(b, o));
+    for (const b of [...f.boxes].sort((a, c) => (a.id === selBox) - (c.id === selBox) || a.x - c.x)){ // 고른 박스는 항상 맨 위, 가장 진하게
+      const bad = b.d > I.d, isFar = far(b) && b.id !== selBox, sfs = clamp(Math.min(b.d / 5, b.h / 2.4), base * 0.5, base * 0.85);
+      h += `<g class="sbox${b.id === selBox ? ' sel' : ''}${bad ? ' bad' : ''}${isFar ? ' far' : ''}" data-sbid="${b.id}">
+        <rect x="${SX + (b.z || 0)}" y="${Y(b.y + b.h)}" width="${b.d}" height="${b.h}" rx="${base*0.25}"/>
+        ${b.h > sfs * 1.8 && !isFar ? `<text x="${SX + (b.z || 0) + b.d / 2}" y="${Y(b.y + b.h / 2) + sfs * 0.35}" text-anchor="middle" font-size="${sfs}">${esc(b.name)}</text>` : ''}</g>`;
+    }
+    if (drag && drag.o && drag.f === f){ const g = {...drag.o}; settle(f, g, G);
+      if (Math.abs(g.y - drag.o.y) > 0.2) h += `<rect class="ghost" x="${SX + (g.z || 0)}" y="${Y(g.y + g.h)}" width="${g.d}" height="${g.h}" rx="${base*0.25}"/>` }
+    h += `<path class="dimln" d="M${SX} ${ty} H${SX + I.d + BK} M${SX} ${ty-tk} V${ty+tk} M${SX + I.d + BK} ${ty-tk} V${ty+tk}"/>`;
+    h += `<text class="dimtxt" x="${SX + (I.d + BK)/2}" y="${ty - base*0.5}" text-anchor="middle" font-size="${base}">깊이 ${f.d}</text>`;
+    h += `<text class="dimtxt" x="${SX}" y="${lb}" font-size="${base*0.9}">앞</text><text class="dimtxt" x="${SX + I.d + BK}" y="${lb}" text-anchor="end" font-size="${base*0.9}">뒤</text>`;
+    h += `<text class="vlabel" x="${I.w / 2}" y="${lb + base*0.2}" text-anchor="middle" font-size="${base*0.95}">앞모습</text><text class="vlabel" x="${SX + (I.d + BK) / 2}" y="${lb + base*0.2}" text-anchor="middle" font-size="${base*0.95}">옆모습</text>`;
+  }
+  if (drag && drag.o && drag.f === f){ // 손을 떼면 내려앉을 자리
+    const g = {...drag.o}; settle(f, g, G);
+    if (Math.abs(g.y - drag.o.y) > 0.2) h += `<rect class="ghost" x="${g.x}" y="${Y(g.y + g.h)}" width="${g.w}" height="${g.h}" rx="${base*0.25}" stroke-width="${base*0.18}"/>`;
+  }
+  svg.innerHTML = h;
+  document.getElementById('stage-title').textContent = `${f.name} 앞모습 · ${f.w}×${f.d}×${f.h}`;
+  document.getElementById('scale').textContent = `가로×세로×높이 · 안쪽 ${I.w}×${I.d}×${I.h}`;
+  const issues = f.boxes.map(b => [b, boxIssues(f, b, G)]).filter(x => x[1].length);
+  setHints('칸을 누르면 나누거나 이름을 붙일 수 있고, 박스는 끌어서 옮겨요.',
+    ['선반·칸막이는 끌어서 옮겨요', '수납함은 끌면 착 붙고, 놓으면 아래로 얹혀요', '옆모습에서도 박스를 끌어 앞뒤·위아래로 옮길 수 있어요', '옆모습에서 가장 진한 굵은 테두리가 고른 박스, 점선이 다른 박스에 가려진 박스예요'],
+    issues.map(([b, is]) => `${esc(b.name)}: ${is.join(', ')}`));
+}
+
+let zoom = 1;
+function applyZoom(){ svg.style.width = (zoom * 100) + '%'; svg.classList.toggle('zoomed', zoom > 1); document.getElementById('zoomlbl').textContent = Math.round(zoom * 100) + '%' }
+function renderStage(){
+  normalize();
+  const cmp = view === 'compare';
+  document.querySelector('.stage').classList.toggle('cmp', cmp);
+  document.getElementById('cvwrap').hidden = cmp; document.getElementById('compare').hidden = !cmp;
+  if (cmp) return renderCompare();
+  applyZoom(); view === 'inner' ? renderInner() : renderRoom();
+}
+// ---------- 배치안 비교 ----------
+let cmpIds = [];
+function furnArea(f){ if (f.shape === 'tri') return f.w * f.d / 2; if (f.shape === 'L'){ const a = armA(f), b = armB(f); return f.w * a + b * (f.d - a) } return f.w * f.d }
+function planStats(q){
+  const keep = S; S = q; normalize();
+  const st = {n:q.furniture.length, over:q.furniture.filter(furnIssues).length, door:q.room.openings.some(openIssue), free:Math.max(0, 100 - q.furniture.reduce((a, f) => a + furnArea(f), 0) / (q.room.w * q.room.d) * 100)};
+  S = keep; return st;
+}
+function fixCmp(){
+  const ok = id => STORE.plans.some(q => q.id === id);
+  if (!ok(cmpIds[0])) cmpIds[0] = S.id;
+  if (!ok(cmpIds[1]) || cmpIds[1] === cmpIds[0]) cmpIds[1] = (STORE.plans.find(q => q.id !== cmpIds[0]) || S).id;
+}
+function renderCompare(){
+  fixCmp();
+  const box = document.getElementById('compare'), wide = box.clientWidth > 640, colW = wide ? (box.clientWidth - 14) / 2 : box.clientWidth || 360;
+  box.innerHTML = cmpIds.map((id, i) => {
+    const q = STORE.plans.find(q => q.id === id), keepS = S, keepSel = sel, keepO = selOpen;
+    S = q; sel = null; selOpen = null; const r = buildRoom('c' + i + '_', colW); S = keepS; sel = keepSel; selOpen = keepO;
+    const st = planStats(q);
+    return `<div class="cmpcol"><select id="cmp-${i}" data-cmp="${i}" aria-label="비교할 배치안 ${i + 1}">${STORE.plans.map(p => `<option value="${p.id}" ${p.id === id ? 'selected' : ''}>${esc(p.group ? p.group + ' · ' : '')}${esc(p.name)}</option>`).join('')}</select>
+      <svg viewBox="${r.vb.join(' ')}" style="aspect-ratio:${r.vb[2]} / ${r.vb[3]}" xmlns="http://www.w3.org/2000/svg">${r.h}</svg>
+      <div class="cmpinfo">가구 ${st.n}개 · 바닥 빈 곳 약 ${Math.round(st.free)}%${st.over ? ` · ⚠ 겹친 가구 ${st.over}개` : ''}${st.door ? ' · ⚠ 문 막힘' : ''}</div></div>`;
+  }).join('');
+  document.getElementById('stage-title').textContent = '배치안 비교';
+  document.getElementById('scale').textContent = '';
+  setHints('두 배치안을 나란히 봐요. 위의 칸에서 비교할 배치안을 바꿀 수 있어요.', ['고치려면 "방 배치" 탭으로 돌아가세요', '바닥 빈 곳은 방 넓이에서 가구가 차지하는 넓이를 뺀 대략적인 비율이에요'], []);
+}
+
+const num = (id, v, label, step = 1) => `<label for="${id}">${label}<input id="${id}" type="number" inputmode="decimal" min="1" step="${step}" value="${v}"></label>`;
+const icoH = '<svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="3"/><line x1="4" y1="22" x2="40" y2="22"/></svg>';
+const icoV = '<svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="3"/><line x1="22" y1="4" x2="22" y2="40"/></svg>';
+
+function renderPanel(){
+  const f = getF(sel);
+  document.getElementById('tab-room').setAttribute('aria-pressed', view === 'room' || view === 'compare');
+  document.getElementById('tab-inner').setAttribute('aria-pressed', view === 'inner');
+  document.getElementById('tab-inner').disabled = !f;
+  let h = '';
+  if (view === 'compare'){
+    fixCmp(); const qs = cmpIds.map(id => STORE.plans.find(q => q.id === id)), st = qs.map(planStats);
+    const row = (lbl, f) => `<tr><td>${lbl}</td>${st.map((x, i) => `<td>${f(x, qs[i])}</td>`).join('')}</tr>`;
+    h += `<section class="card focus"><h2>한눈에 비교</h2><table class="cmptbl"><thead><tr><th></th>${qs.map(q => `<th>${esc(q.name)}</th>`).join('')}</tr></thead><tbody>
+      ${row('가구 수', x => x.n + '개')}${row('바닥 빈 곳', x => '약 ' + Math.round(x.free) + '%')}${row('겹친 가구', x => x.over ? x.over + '개' : '없음')}${row('문 막힘', x => x.door ? '있음' : '없음')}
+      ${row('방 크기', (x, q) => q.room.w + '×' + q.room.d)}</tbody></table>
+      <div class="btns">${qs.map(q => `<button class="btn" data-act="cmp-open" data-id="${q.id}">${esc(q.name)} 고치기</button>`).join('')}</div></section>`;
+    panel.innerHTML = h; return;
+  }
+  if (view === 'room'){
+    const R0 = S.room, op = R0.openings.find(o => o.id === selOpen);
+    if (op){
+      const g = wallGeom(R0, op.wall);
+      h += `<section class="card focus"><h2>선택한 ${op.type === 'door' ? '문' : '창문'}</h2>
+        <label for="o-name">이름<input id="o-name" type="text" value="${esc(op.name || '')}" placeholder="${op.type === 'door' ? '예: 화장실 문, 거실 문' : '예: 큰 창'}"></label>
+        <div class="seg">${Object.entries(WALLS).map(([k, v]) => `<button data-act="o-wall" data-w="${k}" aria-pressed="${op.wall===k}">${v} 벽</button>`).join('')}</div>
+        <div class="grid2">${num('o-w', op.w, '폭')}${num('o-pos', op.pos, op.wall === 'top' || op.wall === 'bottom' ? '왼쪽 벽에서 거리' : '위쪽 벽에서 거리')}</div>
+        <div class="btns">${op.type === 'door' ? `<button class="btn" data-act="o-hinge">열리는 쪽 바꾸기</button>` : ''}<button class="btn danger" data-act="o-del">빼기</button></div></section>`;
+    }
+    if (f){
+      h += `<section class="card focus"><h2>선택한 가구</h2>
+        <label for="f-name">이름<input id="f-name" type="text" value="${esc(f.name)}"></label>
+        <div class="shapes">${['rect','L','tri'].map(k => `<button class="shape" data-act="shape" data-s="${k}" aria-pressed="${(f.shape||'rect')===k}">${shapeIco[k]}${shapeName[k]}</button>`).join('')}</div>
+        <div class="grid3">${num('f-w', f.w, '가로')}${num('f-d', f.d, '깊이')}${num('f-h', f.h, '높이')}</div>
+        ${f.shape === 'L' ? `<div class="grid2">${num('f-t1', armA(f), '가로 쪽 폭')}${num('f-t2', armB(f), '세로 쪽 폭')}</div><p class="note">ㄱ자의 두 팔 폭이에요. 책상이면 보통 상판 깊이(60 정도)예요.</p>` : ''}
+        ${f.shape === 'tri' ? `<p class="note">벽 두 면에 붙는 두 변이 가로·깊이예요. 비스듬한 쪽이 앞면이에요.</p>` : ''}
+        <div class="btns"><button class="btn primary" data-act="view-inner">속 정리하기</button><button class="btn" data-act="dup-f">하나 더</button><button class="btn" data-act="rot">90° 돌리기</button>${f.shape === 'L' || f.shape === 'tri' ? `<button class="btn" data-act="flip">좌우 뒤집기</button>` : ''}
+        <button class="btn danger${armed===f.id?' armed':''}" data-act="del-f">${armed===f.id?'한 번 더 누르면 삭제':'삭제'}</button></div></section>`;
+    }
+    h += `<section class="card"><h2>방 크기</h2><div class="grid2">${num('room-w', S.room.w, '가로 (cm)')}${num('room-d', S.room.d, '세로 (cm)')}</div></section>`;
+    h += `<section class="card"><h2>가구 목록</h2>${S.furniture.length ? `<ul class="list">${S.furniture.map(o =>
+      `<li><button data-act="pick" data-id="${o.id}" aria-current="${o.id===sel}"><span class="nm">${esc(o.name)}</span><span class="dim">${o.w}×${o.d}×${o.h}</span></button></li>`).join('')}</ul>` : '<p class="empty">아직 가구가 없어요. 아래에서 추가해 보세요.</p>'}</section>`;
+    h += `<section class="card"><h2>가구 추가</h2><label for="nf-name">이름<input id="nf-name" type="text" placeholder="예: 서랍장"></label>
+      <div class="shapes">${['rect','L','tri'].map(k => `<button class="shape" data-act="nshape" data-s="${k}" aria-pressed="${newShape===k}">${shapeIco[k]}${shapeName[k]}</button>`).join('')}</div>
+      <div class="grid3">${num('nf-w', newShape === 'L' ? 160 : newShape === 'tri' ? 40 : 80, '가로')}${num('nf-d', newShape === 'L' ? 140 : newShape === 'tri' ? 40 : 45, '깊이')}${num('nf-h', 100, '높이')}</div>
+      ${newShape === 'L' ? `<div class="grid2">${num('nf-t1', 60, '가로 쪽 폭')}${num('nf-t2', 60, '세로 쪽 폭')}</div>` : ''}
+      <button class="btn primary" data-act="add-f">방에 넣기</button></section>`;
+    h += `<section class="card"><h2>문·창문</h2>${R0.openings.length ? `<ul class="list">${R0.openings.map(o =>
+      `<li><button data-act="pick-o" data-id="${o.id}" aria-current="${o.id===selOpen}"><span class="nm">${esc(o.name || (o.type === 'door' ? '문' : '창문'))} · ${WALLS[o.wall]} 벽</span><span class="dim">폭 ${o.w}</span></button></li>`).join('')}</ul>` : '<p class="empty">아직 문이 없어요.</p>'}
+      <div class="btns"><button class="btn" data-act="add-door">+ 문</button><button class="btn" data-act="add-win">+ 창문</button></div></section>`;
+    h += `<section class="card"><h2>배치안</h2>
+      <label for="p-name">이 배치안 이름<input id="p-name" type="text" value="${esc(S.name)}"></label>
+      <div class="btns"><button class="btn primary" data-act="plan-dup">복사해서 새 배치안</button><button class="btn" data-act="plan-empty">빈 방으로 새 배치안</button></div>
+      <div class="btns"><button class="btn" data-act="plan-sample">예시 배치안 추가</button>${STORE.plans.length > 1 ? `<button class="btn danger${armed==='plan-del'?' armed':''}" data-act="plan-del">${armed==='plan-del'?'한 번 더 누르면 삭제':'이 배치안 삭제'}</button>` : ''}</div>
+      <p class="note">위쪽 이름표를 누르면 배치안끼리 바로 바꿔 볼 수 있어요. "빈 방으로"는 방 크기와 문·창문만 가져가요.</p></section>`;
+    h += `<section class="card"><h2>백업</h2><p class="note" id="sync-note">${syncText(true)}</p>
+      <div class="btns"><button class="btn" data-act="export">백업 파일 저장</button><button class="btn" data-act="import">백업 파일 불러오기</button></div></section>`;
+  } else if (f){
+    const I = f.inner, G = geo(f), bx = f.boxes.find(b => b.id === selBox), cell = !bx && G.cells.find(c => c.path === selCell);
+    if (bx){
+      h += `<section class="card focus"><h2>선택한 수납함</h2><label for="b-name">이름<input id="b-name" type="text" value="${esc(bx.name)}"></label>
+        <div class="grid3">${num('b-w', bx.w, '가로', .1)}${num('b-h', bx.h, '높이', .1)}${num('b-d', bx.d, '깊이', .1)}</div>
+        <label for="b-z">앞에서 안쪽으로 밀어 넣은 거리 (cm)<input id="b-z" type="number" inputmode="decimal" min="0" step=".1" value="${bx.z || 0}"></label>
+        <div class="btns"><button class="btn" data-act="dup-b">하나 더</button><button class="btn" data-act="turn-b">눕히기 (가로↔높이)</button><button class="btn danger" data-act="del-b">빼기</button></div></section>`;
+    } else if (cell){
+      h += `<section class="card focus"><div class="cellhead"><span class="badge">${cell.no}</span><h2>선택한 칸</h2></div>
+        <label for="cell-name">칸 이름<input id="cell-name" type="text" value="${esc(cell.name)}" placeholder="예: 속옷 칸, 옷걸이"></label>
+        <div class="grid2">${num('cell-w', r1(cell.x1 - cell.x0), '이 칸 너비', .1)}${num('cell-h', r1(cell.top - cell.bottom), '이 칸 높이', .1)}</div>
+        <div class="splits"><button class="split" data-act="split-h">${icoH}가로로 나누기<small>선반 넣기</small></button>
+          <button class="split" data-act="split-v">${icoV}세로로 나누기<small>칸막이 넣기</small></button></div>
+        ${cell.path ? `<button class="btn danger" data-act="merge">이 칸을 나눈 판 빼기</button>` : ''}
+        <p class="note">잰 칸 크기를 바로 넣으면 옆 칸이 알아서 맞춰져요.</p></section>`;
+    } else {
+
+    }
+    h += `<section class="card"><h2>${esc(f.name)} 안쪽 치수</h2>
+      <div class="grid3">${num('i-w', I.w, '가로', .1)}${num('i-h', I.h, '높이', .1)}${num('i-d', I.d, '깊이', .1)}</div>
+      ${f.innerAuto !== false
+        ? `<p class="note">겉 치수 ${f.w}×${f.d}×${f.h} cm에서 판 두께 ${T}cm를 빼서 자동으로 맞췄어요. 겉 치수를 바꾸면 같이 바뀌어요. 안쪽을 직접 재셨으면 그 값으로 고쳐 넣으세요.</p>`
+        : `<p class="note">직접 넣은 안쪽 치수예요 (겉 치수 ${f.w}×${f.d}×${f.h} cm).</p><button class="btn" data-act="inner-auto">겉 치수에 맞추기</button>`}</section>`;
+    h += `<section class="card"><h2>수납함 넣기</h2><label for="nb-name">이름<input id="nb-name" type="text" placeholder="예: 리빙박스 M"></label>
+      <div class="grid4">${num('nb-w', 30, '가로', .1)}${num('nb-h', 25, '높이', .1)}${num('nb-d', 35, '깊이', .1)}${num('nb-q', 1, '개수')}</div>
+      <button class="btn primary" data-act="add-b">빈 자리에 넣기</button>
+      <div id="calc"></div></section>`;
+    h += `<section class="card"><h2>들어간 수납함 ${f.boxes.length}개</h2>${f.boxes.length ? f.boxes.map(b => { const is = boxIssues(f, b, G);
+      return `<div class="boxrow${b.id===selBox?' on':''}" data-act="pick-b" data-id="${b.id}"><span class="nm">${esc(b.name)}</span>
+      ${is.length ? `<span class="pill">${is[0]}</span>` : `<span class="dim">${b.w}×${b.h}×${b.d}</span>`}<button class="x" data-act="del-b" data-id="${b.id}" aria-label="${esc(b.name)} 빼기">×</button></div>` }).join('') : '<p class="empty">아직 비어 있어요.</p>'}</section>`;
+  }
+  panel.innerHTML = h;
+  if (view === 'inner') renderCalc();
+}
+
+function renderCalc(){
+  const f = getF(sel), el = document.getElementById('calc'); if (!f || !el) return;
+  const v = id => parseFloat(document.getElementById(id).value);
+  const bw = v('nb-w'), bh = v('nb-h'), bd = v('nb-d');
+  if (!(bw > 0 && bh > 0 && bd > 0)){ el.innerHTML = ''; return }
+  const rows = geo(f).cells.map(c => {
+    const ch = c.top - c.bottom, cw = c.x1 - c.x0, ly = Math.floor(ch / bh);
+    const a = [Math.floor(cw / bw), Math.floor(f.inner.d / bd)], b = [Math.floor(cw / bd), Math.floor(f.inner.d / bw)];
+    const best = a[0]*a[1] >= b[0]*b[1] ? a : b, n = best[0] * best[1] * ly;
+    return `<tr><td><span class="badge">${c.no}</span> ${c.name ? esc(c.name) + ' ' : ''}<span class="dim">${r1(cw)}×${r1(ch)}</span></td><td class="howfit">${n ? `가로 ${best[0]} · 앞뒤 ${best[1]}줄 · ${ly}층${best === b ? ' (돌려서)' : ''}` : '안 들어가요'}</td><td class="n big">${n}개</td></tr>`;
+  }).join('');
+  el.innerHTML = `<p class="note">이 크기면 칸마다 최대 몇 개?</p><table><thead><tr><th>칸 (너비×높이)</th><th>넣는 모양</th><th style="text-align:right">개수</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="note">칸 번호는 그림의 번호와 같아요. "돌려서"는 박스를 옆으로 돌려 넣었을 때 더 많이 들어간다는 뜻이에요.</p>`;
+}
+
+function renderAll(){ renderStage(); renderPanel(); renderPlans() }
+function nextName(){ const used = new Set(STORE.plans.map(q => q.name)); for (const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'){ if (!used.has(c + '안')) return c + '안' } return '새 배치안' }
+function renderPlans(){
+  const groups = []; for (const q of STORE.plans){ const g = q.group || ''; if (!groups.includes(g)) groups.push(g) }
+  const named = groups.some(g => g);
+  document.getElementById('plans').innerHTML = `<span class="lbl">배치안</span>` +
+    groups.map(g => (named ? `<span class="grp">${esc(g || '그룹 없음')}</span>` : '') + STORE.plans.filter(q => (q.group || '') === g).map(q => `<button class="chip" data-act="plan" data-id="${q.id}" aria-current="${q.id === S.id}">${esc(q.name)}</button>`).join('')).join('') +
+    `<button class="chip" data-act="mgr-open" title="순서 바꾸기, 여러 개 지우기, 정렬, 그룹">☰ 정리</button><button class="chip" data-act="compare" aria-current="${view === 'compare'}" title="두 배치안을 나란히 보기">⇆ 비교</button>` +
+    `<button class="chip add" data-act="plan-dup" title="지금 배치안을 복사해서 새로 만들어요">+ 복사해서 새로</button>
+    <span class="sync" id="sync">${syncText()}</span>
+`;
+  undoBtns();
+}
+document.addEventListener('keydown', e => {
+  if (!(e.metaKey || e.ctrlKey)) return;
+  const k = e.key.toLowerCase(); if (k !== 'z' && k !== 'y') return;
+  if (e.target.closest && e.target.closest('input,textarea')) return; // 입력칸에선 글자 되돌리기
+  e.preventDefault(); (k === 'y' || e.shiftKey) ? redo() : undo();
+});
+// ---------- 배치안 정리 ----------
+const mgr = {open:false, picked:new Set(), armed:false};
+const fmtWhen = t => { if (!t) return ''; const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` };
+function plansChanged(){ // 순서·그룹·이름 바뀐 걸 저장하고 백업
+  STORE.plans.forEach((q, i) => q.order = i);
+  persistLocal(); STORE.plans.forEach(q => cloudQueue(q)); renderPlans();
+}
+function renderMgr(){
+  const el = document.getElementById('mgr'); el.hidden = !mgr.open; document.body.style.overflow = mgr.open ? 'hidden' : '';
+  if (!mgr.open){ el.innerHTML = ''; return }
+  for (const id of [...mgr.picked]) if (!STORE.plans.some(q => q.id === id)) mgr.picked.delete(id);
+  const n = mgr.picked.size, all = n === STORE.plans.length, groups = [...new Set(STORE.plans.map(q => q.group).filter(Boolean))];
+  const row = (q, i) => `<li class="mrow${q.id === S.id ? ' cur' : ''}${mgr.picked.has(q.id) ? ' on' : ''}" data-mid="${q.id}">
+      <span class="handle" data-handle="${q.id}" aria-label="끌어서 순서 바꾸기">⠿</span>
+      <button class="mpick" data-act="mgr-pick" data-id="${q.id}" aria-pressed="${mgr.picked.has(q.id)}">
+        <span class="tick" aria-hidden="true">${mgr.picked.has(q.id) ? '✓' : ''}</span>
+        <span class="mname">${esc(q.name)}</span>
+        <span class="msub">${q.group ? `<span class="gtag">${esc(q.group)}</span>` : ''}${q.id === S.id ? '지금 보는 중 · ' : ''}${fmtWhen(q.updatedAt)}</span>
+      </button>
+      <span class="mv"><button data-act="mgr-up" data-id="${q.id}" ${i ? '' : 'disabled'} aria-label="위로">↑</button><button data-act="mgr-down" data-id="${q.id}" ${i < STORE.plans.length - 1 ? '' : 'disabled'} aria-label="아래로">↓</button></span></li>`;
+  el.innerHTML = `<div class="mgr" role="dialog" aria-modal="true" aria-labelledby="mgr-t">
+    <div class="mgr-head"><h2 id="mgr-t">배치안 정리</h2><button class="btn" data-act="mgr-close">닫기</button></div>
+    <div class="sorts" role="group" aria-label="자동 정렬"><button data-act="mgr-sort" data-k="name">가나다순</button><button data-act="mgr-sort" data-k="recent">최근 고친 순</button><button data-act="mgr-sort" data-k="group">그룹끼리</button></div>
+    <p class="note">이름을 누르면 골라져요. 여러 개 고른 뒤 아래에서 그룹으로 묶거나 지울 수 있어요.</p>
+    <ul class="mrows" id="mrows">${STORE.plans.map(row).join('')}</ul>
+    <div class="mgr-foot">${n ? `
+      <div class="selbar"><b>${n}개 고름</b><button class="link" data-act="mgr-all">${all ? '모두 풀기' : '모두 고르기'}</button><button class="link" data-act="mgr-none">고르기 취소</button></div>
+      <div class="gpick"><span class="lbl2">그룹으로 묶기</span>
+        ${groups.map(g => `<button class="gchip" data-act="mgr-group" data-g="${esc(g)}">${esc(g)}</button>`).join('')}
+        <span class="newg"><input id="mgr-gname" type="text" placeholder="새 그룹 이름" enterkeyhint="done"><button class="gchip add" data-act="mgr-group-new">+ 만들기</button></span>
+        ${STORE.plans.some(q => mgr.picked.has(q.id) && q.group) ? `<button class="gchip off" data-act="mgr-group" data-g="">그룹 빼기</button>` : ''}</div>
+      <button class="btn danger wide${mgr.armed ? ' armed' : ''}" data-act="mgr-del" ${all ? 'disabled' : ''}>${all ? '배치안은 하나는 남아야 해서 전부 지울 수는 없어요' : mgr.armed ? `한 번 더 누르면 ${n}개 삭제` : `고른 ${n}개 삭제`}</button>`
+    : `<p class="note">↑ ↓ 버튼이나 왼쪽 ⠿ 를 끌어서 순서를 바꿀 수 있어요.</p>`}</div></div>`;
+}
+function setGroup(g){
+  for (const q of STORE.plans) if (mgr.picked.has(q.id)){ q.group = g; q.updatedAt = Date.now() }
+  mgr.picked.clear(); plansChanged(); toast(g ? `"${g}" 그룹으로 묶었어요` : '그룹에서 뺐어요');
+}
+function mgrAct(act, t){
+  const idx = id => STORE.plans.findIndex(q => q.id === id);
+  if (act !== 'mgr-del') mgr.armed = false;
+  switch (act){
+    case 'mgr-open': mgr.open = true; mgr.picked.clear(); break;
+    case 'mgr-close': mgr.open = false; break;
+    case 'mgr-pick': { const id = t.dataset.id; mgr.picked.has(id) ? mgr.picked.delete(id) : mgr.picked.add(id); break; }
+    case 'mgr-all': if (mgr.picked.size === STORE.plans.length) mgr.picked.clear(); else STORE.plans.forEach(q => mgr.picked.add(q.id)); break;
+    case 'mgr-none': mgr.picked.clear(); break;
+    case 'mgr-up': case 'mgr-down': { const i = idx(t.dataset.id), j = act === 'mgr-up' ? i - 1 : i + 1; if (j < 0 || j >= STORE.plans.length) break;
+      [STORE.plans[i], STORE.plans[j]] = [STORE.plans[j], STORE.plans[i]]; plansChanged(); break; }
+    case 'mgr-sort': { const k = t.dataset.k, cmp = (a, b) => a.name.localeCompare(b.name, 'ko', {numeric:true});
+      if (k === 'name') STORE.plans.sort(cmp);
+      else if (k === 'recent') STORE.plans.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      else { const first = []; for (const q of STORE.plans){ const g = q.group || ''; if (!first.includes(g)) first.push(g) }
+        STORE.plans.sort((a, b) => (!a.group) - (!b.group) || first.indexOf(a.group || '') - first.indexOf(b.group || '') || cmp(a, b)) }
+      plansChanged(); toast(k === 'name' ? '가나다순으로 정렬했어요' : k === 'recent' ? '최근 고친 순으로 정렬했어요' : '그룹끼리 모았어요'); break; }
+    case 'mgr-group': setGroup(t.dataset.g || ''); break;
+    case 'mgr-group-new': { const g = (document.getElementById('mgr-gname')?.value || '').trim(); if (!g){ document.getElementById('mgr-gname')?.focus(); return } setGroup(g); break; }
+    case 'mgr-del': { const n = mgr.picked.size; if (!n || n >= STORE.plans.length) break;
+      if (!mgr.armed){ mgr.armed = true; break }
+      const gone = STORE.plans.filter(q => mgr.picked.has(q.id));
+      STORE.plans = STORE.plans.filter(q => !mgr.picked.has(q.id)); gone.forEach(q => { cloudDelete(q); delete hist[q.id] });
+      mgr.picked.clear(); mgr.armed = false; plansChanged(); persistHist();
+      if (!STORE.plans.some(q => q.id === S.id)) switchPlan(STORE.plans[0].id);
+      toast(`배치안 ${n}개를 지웠어요`); break; }
+  }
+  renderMgr();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && mgr.open){ mgr.open = false; renderMgr() }
+  if (e.key === 'Enter' && e.target.id === 'mgr-gname'){ e.preventDefault(); mgrAct('mgr-group-new', e.target) }
+});
+document.getElementById('mgr').addEventListener('pointerdown', e => {
+  if (e.target === e.currentTarget){ mgr.open = false; renderMgr(); return } // 바깥 누르면 닫기
+  const h = e.target.closest('[data-handle]'); if (!h) return;
+  e.preventDefault();
+  const id = h.dataset.handle, row = h.closest('.mrow'); row.classList.add('dragging');
+  const move = ev => {
+    const list = document.getElementById('mrows'), others = [...list.children].filter(r => r !== row), from = STORE.plans.findIndex(q => q.id === id);
+    const to = others.filter(r => { const bb = r.getBoundingClientRect(); return bb.top + bb.height / 2 < ev.clientY }).length;
+    if (to !== from){ const [q] = STORE.plans.splice(from, 1); STORE.plans.splice(to, 0, q); list.insertBefore(row, others[to] || null) }
+  };
+  const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); plansChanged(); renderMgr() };
+  window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+});
+function switchPlan(id){
+  const q = STORE.plans.find(q => q.id === id); if (!q) return;
+  STORE.current = id; S = q; H(S); persistLocal();
+  if (!getF(sel)) sel = S.furniture[0]?.id || null;
+  selBox = null; selCell = null; selOpen = null; armed = null;
+  if (view === 'inner' && !getF(sel)) view = 'room';
+  renderAll();
+}
+let toastT = 0;
+function toast(msg){ const el = document.getElementById('toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2600) }
+
+// 계정 백업 (claude.ai 계정에 개인용으로 저장, 다른 기기에서도 이어서 보기)
+const cloud = {col:null, state:'local', at:0, timers:{}};
+function syncText(long){
+  const tm = cloud.at ? new Date(cloud.at).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : '';
+  if (cloud.state === 'ok') return long ? `배치안 ${STORE.plans.length}개가 내 계정에 자동 백업돼요. 마지막 백업 ${tm}. 다른 기기에서 이 페이지를 열어도 이어서 볼 수 있어요.` : `☁ 자동 백업됨 ${tm}`;
+  if (cloud.state === 'saving') return long ? '백업하는 중이에요.' : '☁ 백업 중…';
+  if (cloud.state === 'error') return long ? '계정 백업이 잠시 안 되고 있어요. 이 브라우저에는 저장돼 있어요. 백업 파일도 저장해 두세요.' : '이 브라우저에만 저장됨';
+  return long ? '지금은 이 브라우저에만 저장돼요. 백업 파일로 저장해 두면 다른 곳에서도 불러올 수 있어요.' : '이 브라우저에 저장됨';
+}
+function setSync(st){ cloud.state = st; if (st === 'ok') cloud.at = Date.now(); const a = document.getElementById('sync'); if (a) a.textContent = syncText(); const b = document.getElementById('sync-note'); if (b) b.textContent = syncText(true) }
+const planDoc = q => ({name:q.name, group:q.group || '', order:STORE.plans.indexOf(q), updatedAt:q.updatedAt, json:JSON.stringify({room:q.room, furniture:q.furniture, example:q.example})});
+function cloudQueue(q){
+  if (!cloud.col) return;
+  clearTimeout(cloud.timers[q.id]); setSync('saving');
+  cloud.timers[q.id] = setTimeout(async () => { try{ await cloud.col.doc(q.id).set(planDoc(q)); setSync('ok') }catch(e){ setSync('error') } }, 1200);
+}
+async function cloudDelete(q){ if (!cloud.col) return; try{ await cloud.col.doc(q.id).set({deleted:true, updatedAt:Date.now()}); setSync('ok') }catch(e){ setSync('error') } }
+async function initCloud(){
+  if (!window.claude || !claude.use) return;
+  try{
+    const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
+    if (!db || !user) return;
+    const me = await user.id(); if (!me) return;
+    cloud.col = db.collection('data/users/' + me);
+    const snap = await cloud.col.get();
+    const seen = new Set(); let changed = false;
+    for (const d of snap.docs){
+      const v = d.data(); if (!v) continue; seen.add(d.id);
+      const local = STORE.plans.find(q => q.id === d.id);
+      if (v.deleted){ if (local && local.updatedAt <= v.updatedAt){ STORE.plans = STORE.plans.filter(q => q !== local); changed = true } continue }
+      if (!local || v.updatedAt > local.updatedAt){
+        let body; try{ body = migrate(JSON.parse(v.json)) }catch(e){ continue }
+        const q = {id:d.id, name:v.name, group:v.group || '', order:v.order, updatedAt:v.updatedAt, ...body};
+        if (local) Object.assign(local, q); else STORE.plans.push(q); changed = true;
+      }
+    }
+    for (const q of STORE.plans) if (!seen.has(q.id) || snap.docs.find(d => d.id === q.id)?.data()?.updatedAt < q.updatedAt) await cloud.col.doc(q.id).set(planDoc(q));
+    if (changed) STORE.plans.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+    if (!STORE.plans.length){ const q = makePlan('A안', sample()); STORE.plans.push(q) }
+    setSync('ok');
+    if (changed){ for (const k in hist) delete hist[k]; persistLocal(); switchPlan(STORE.plans.some(q => q.id === STORE.current) ? STORE.current : STORE.plans[0].id) }
+  }catch(e){ setSync('error') }
+}
+
+// 백업 파일
+async function exportBackup(){
+  const data = JSON.stringify({app:'룸 스케일', version:2, exportedAt:new Date().toISOString(), plans:STORE.plans}, null, 1);
+  const d = new Date(), name = `룸스케일_백업_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
+  let dl = null; try{ dl = window.claude && claude.use ? await claude.use('downloads') : null }catch(e){}
+  if (dl){ try{ await dl.save({filename:name, data}); toast('백업 파일을 저장했어요') }catch(e){ if (e && e.code !== 'declined' && e.code !== 'cancelled') toast('저장하지 못했어요. 다시 눌러 주세요') } return }
+  try{ await navigator.clipboard.writeText(data); toast('파일 저장이 안 되는 화면이라, 백업 내용을 복사했어요. 메모장에 붙여넣어 .json으로 저장하세요') }
+  catch(e){ toast('이 화면에서는 백업 파일을 저장할 수 없어요') }
+}
+document.getElementById('importFile').addEventListener('change', e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const obj = JSON.parse(rd.result), list = obj.plans || (obj.room ? [makePlan('불러온 배치안', obj)] : []);
+      let n = 0;
+      for (const raw of list){ if (!raw.room || !raw.furniture) continue; const q = migrate(clone(raw));
+        q.id = q.id || uid(); q.updatedAt = q.updatedAt || Date.now(); q.name = q.name || '불러온 배치안';
+        const local = STORE.plans.find(x => x.id === q.id);
+        if (local){ if (q.updatedAt > local.updatedAt){ Object.assign(local, q); cloudQueue(local); n++ } }
+        else { STORE.plans.push(q); cloudQueue(q); n++ } }
+      persistLocal(); renderAll(); toast(n ? `배치안 ${n}개를 불러왔어요` : '새로 불러올 배치안이 없어요 (이미 최신이에요)');
+    }catch(err){ toast('이 파일은 배치도 백업 파일이 아니에요') }
+  };
+  rd.readAsText(file);
+});
+
+// ---------- 입력 ----------
+panel.addEventListener('input', e => {
+  const t = e.target, f = getF(sel), v = parseFloat(t.value), ok = v > 0;
+  const bx = f && f.boxes.find(b => b.id === selBox);
+  switch (t.id){
+    case 'p-name': S.name = t.value.trim() || '이름 없는 배치안'; renderPlans(); save(true); return;
+    case 'o-name': { const o = S.room.openings.find(o => o.id === selOpen); o.name = t.value.trim(); renderStage(); save(true); return; }
+    case 'o-w': case 'o-pos': { const o = S.room.openings.find(o => o.id === selOpen); if (t.id === 'o-w' ? ok : v >= 0) o[t.id === 'o-w' ? 'w' : 'pos'] = v; break; }
+    case 'room-w': if (ok) S.room.w = v; break; case 'room-d': if (ok) S.room.d = v; break;
+    case 'f-name': f.name = t.value || '이름 없음'; break;
+    case 'f-t1': if (ok) f.t1 = v; break; case 'f-t2': if (ok) f.t2 = v; break;
+    case 'f-w': if (ok) f.w = v; break; case 'f-d': if (ok) f.d = v; break; case 'f-h': if (ok) f.h = v; break;
+    case 'i-w': case 'i-h': case 'i-d': if (ok){ f.innerAuto = false; f.inner[t.id[2]] = v } break;
+    case 'cell-name': { const n = node(f, selCell); if (n){ n.name = t.value.trim(); if (!n.name) delete n.name } renderStage(); renderCalc(); save(true); return; }
+    case 'cell-w': case 'cell-h': if (ok){ setCellSize(f, selCell, t.id === 'cell-w' ? 'w' : 'h', v); settleAll(f) } break;
+    case 'b-name': bx.name = t.value || '수납함'; break;
+    case 'b-w': if (ok) bx.w = v; break; case 'b-h': if (ok) bx.h = v; break; case 'b-d': if (ok) bx.d = v; break; case 'b-z': if (v >= 0) bx.z = v; break;
+    case 'nb-w': case 'nb-h': case 'nb-d': renderCalc(); return;
+    default: return;
+  }
+  S.example = false; renderStage(); save(true);
+});
+panel.addEventListener('change', e => { if (['o-name','o-w','o-pos','f-t1','f-t2','f-name','b-name','f-w','f-d','f-h','b-w','b-h','b-d','b-z','i-w','i-h','i-d','cell-w','cell-h'].includes(e.target.id)) renderPanel() });
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const act = t.dataset.act, f = getF(sel), prevArmed = armed; armed = null;
+  const val = id => parseFloat(document.getElementById(id)?.value);
+  switch (act){
+    case 'view-room': view = 'room'; selBox = null; zoom = 1; break;
+    case 'view-inner': if (f){ view = 'inner'; selCell = null; zoom = 1 } break;
+    case 'pick': sel = t.dataset.id; selOpen = null; break;
+    case 'cmp-open': view = 'room'; switchPlan(t.dataset.id); return;
+    case 'rot': f.rot = (f.rot + 90) % 360; break;
+    case 'dup-f': { // 같은 가구 하나 더: 옆 빈자리에 놓기 (수납함까지 그대로)
+      const c = clone(f); c.id = uid(); c.boxes.forEach(b => b.id = uid()); const pp = fp(f);
+      const spots = [[f.x + pp.w, f.y], [f.x, f.y + pp.d], [f.x - pp.w, f.y], [f.x, f.y - pp.d], [f.x + 20, f.y + 20]];
+      S.furniture.push(c);
+      for (const [x, y] of spots){ if (x < 0 || y < 0 || x + pp.w > S.room.w + .01 || y + pp.d > S.room.d + .01) continue; c.x = x; c.y = y; if (!furnIssues(c)) break }
+      if (furnIssues(c) || c.x === f.x && c.y === f.y){ c.x = clamp(f.x + 20, 0, Math.max(0, S.room.w - pp.w)); c.y = clamp(f.y + 20, 0, Math.max(0, S.room.d - pp.d)) }
+      sel = c.id; toast(`${f.name}을 하나 더 넣었어요`); break; }
+    case 'inner-auto': f.innerAuto = true; syncInner(f); settleAll(f); break;
+    case 'flip': f.flip = !f.flip; break;
+    case 'shape': f.shape = t.dataset.s; if (f.shape === 'L'){ f.t1 = f.t1 || Math.min(60, f.d / 2); f.t2 = f.t2 || Math.min(60, f.w / 2) } break;
+    case 'nshape': newShape = t.dataset.s; break;
+    case 'del-f': if (prevArmed === f.id){ S.furniture = S.furniture.filter(o => o !== f); sel = S.furniture[0]?.id || null } else armed = f.id; break;
+    case 'add-f': {
+      const w = val('nf-w'), d = val('nf-d'), h = val('nf-h'); if (!(w > 0 && d > 0 && h > 0)) break;
+      const nf = {id:uid(), name:document.getElementById('nf-name').value.trim() || '새 가구', w, d, h, x:0, y:0, rot:0,
+        innerAuto:true, inner:{w:1, h:1, d:1}, layout:leaf(), boxes:[], shape:newShape};
+      if (newShape === 'L'){ nf.t1 = val('nf-t1') || 60; nf.t2 = val('nf-t2') || 60 }
+      nf.x = Math.max(0, (S.room.w - w) / 2) | 0; nf.y = Math.max(0, (S.room.d - d) / 2) | 0;
+      S.furniture.push(nf); sel = nf.id; break; }
+    case 'split-h': case 'split-v': {
+      const n = node(f, selCell), c = geo(f).cells.find(c => c.path === selCell); if (!n || !c) break;
+      const size = act === 'split-h' ? c.top - c.bottom : c.x1 - c.x0;
+      if (size < T + 4) break;
+      n.split = act === 'split-h' ? 'h' : 'v'; n.at = r1((size - T) / 2); n.a = leaf(); n.b = leaf(); if (n.name){ n.a.name = n.name; delete n.name }
+      selCell = selCell + 'a'; settleAll(f); break; }
+    case 'merge': { const p = selCell.slice(0, -1), n = node(f, p), nm = (n.a && !n.a.split && n.a.name) || (n.b && !n.b.split && n.b.name) || ''; if (nm) n.name = nm; delete n.split; delete n.at; delete n.a; delete n.b; selCell = p; settleAll(f); break; }
+    case 'add-b': {
+      const w = val('nb-w'), h = val('nb-h'), d = val('nb-d'), q = clamp(Math.round(val('nb-q')) || 1, 1, 40);
+      if (!(w > 0 && h > 0 && d > 0)) break;
+      const name = document.getElementById('nb-name').value.trim() || '수납함';
+      for (let i = 0; i < q; i++){ const b = {id:uid(), name, w, h, d, x:0, y:0}; autoPlace(f, b); f.boxes.push(b); selBox = b.id }
+      break; }
+    case 'pick-b': if (e.target.closest('.x')) return; selBox = t.dataset.id; break;
+    case 'del-b': { const id = t.dataset.id || selBox; f.boxes = f.boxes.filter(b => b.id !== id); if (selBox === id) selBox = null; break; }
+    case 'dup-b': { const o = f.boxes.find(b => b.id === selBox); const b = {...o, id:uid()}; autoPlace(f, b); f.boxes.push(b); selBox = b.id; break; }
+    case 'turn-b': { const b = f.boxes.find(b => b.id === selBox); [b.w, b.h] = [b.h, b.w]; settle(f, b); break; }
+    case 'plan': switchPlan(t.dataset.id); return;
+    case 'help': helpOpen = !helpOpen; try{ localStorage.setItem('room-planner-help', helpOpen ? '1' : '0') }catch(e){} document.getElementById('hint').hidden = !helpOpen; t.setAttribute('aria-pressed', helpOpen); return;
+    case 'zoom-in': zoom = Math.min(4, +(zoom * 1.5).toFixed(2)); renderStage(); return;
+    case 'zoom-out': zoom = Math.max(1, +(zoom / 1.5).toFixed(2)); if (zoom < 1.05) zoom = 1; renderStage(); return;
+    case 'zoom-fit': zoom = 1; renderStage(); return;
+    case 'compare': if (STORE.plans.length < 2){ toast('배치안이 2개 이상 있어야 비교할 수 있어요. "+ 복사해서 새로"로 하나 더 만들어 보세요'); return }
+      view = 'compare'; cmpIds = [S.id, (STORE.plans.find(q => q.id !== S.id)).id]; renderAll(); return;
+    case 'mgr-open': case 'mgr-close': case 'mgr-pick': case 'mgr-all': case 'mgr-none': case 'mgr-group-new': case 'mgr-up': case 'mgr-down': case 'mgr-sort': case 'mgr-group': case 'mgr-del': mgrAct(act, t); return;
+    case 'undo': undo(); return;
+    case 'redo': redo(); return;
+    case 'plan-dup': { const q = clone(S); q.id = uid(); q.name = nextName(); q.updatedAt = Date.now(); q.example = false; STORE.plans.push(q); STORE.current = q.id; S = q; toast(`"${q.name}"을 만들었어요. 이제 마음껏 바꿔 보세요`); break; }
+    case 'plan-empty': { const q = makePlan(nextName(), {room:clone(S.room), furniture:[]}); STORE.plans.push(q); STORE.current = q.id; S = q; sel = null; break; }
+    case 'plan-sample': { const q = makePlan('예시', sample()); STORE.plans.push(q); STORE.current = q.id; S = q; sel = S.furniture[2].id; break; }
+    case 'plan-del': if (prevArmed === 'plan-del'){ const gone = S; STORE.plans = STORE.plans.filter(q => q !== gone); cloudDelete(gone); switchPlan(STORE.plans[0].id); return } else armed = 'plan-del'; break;
+    case 'export': exportBackup(); return;
+    case 'import': document.getElementById('importFile').click(); return;
+    case 'add-door': case 'add-win': { const o = {id:uid(), name:act === 'add-door' ? '문 ' + (S.room.openings.filter(x => x.type === 'door').length + 1) : '창문 ' + (S.room.openings.filter(x => x.type !== 'door').length + 1), type:act === 'add-door' ? 'door' : 'window', wall:'bottom', w:act === 'add-door' ? 80 : 120, hinge:'start'};
+      o.pos = Math.max(0, r1((S.room.w - o.w) / 2)); S.room.openings.push(o); selOpen = o.id; break; }
+    case 'pick-o': selOpen = t.dataset.id; break;
+    case 'o-wall': { const o = S.room.openings.find(o => o.id === selOpen); o.wall = t.dataset.w; break; }
+    case 'o-hinge': { const o = S.room.openings.find(o => o.id === selOpen); o.hinge = o.hinge === 'end' ? 'start' : 'end'; break; }
+    case 'o-del': S.room.openings = S.room.openings.filter(o => o.id !== selOpen); selOpen = null; break;
+    default: return;
+  }
+  if (!['view-room','view-inner','pick','pick-b','nshape','pick-o'].includes(act) && !armed) S.example = false;
+  save(); renderAll();
+});
+
+// ---------- 끌기 ----------
+function pt(e){ const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()) }
+function snapTo(v, cs, d, lo, hi){ let best = v, bd = d; for (const c of cs){ const k = Math.abs(v - c); if (k < bd && c >= lo - 0.01 && c <= hi + 0.01){ bd = k; best = c } } return r1(best) }
+svg.addEventListener('pointerdown', e => {
+  const g = e.target.closest('[data-oid],[data-fid],[data-bid],[data-sbid],[data-div]'); if (!g) return; // 빈 곳·칸은 눌러도 스크롤되게 (칸 고르기는 click에서)
+  const p = pt(e); e.preventDefault();
+  if (g.dataset.oid){ selOpen = g.dataset.oid; drag = {op:S.room.openings.find(o => o.id === selOpen)}; svg.setPointerCapture(e.pointerId); renderAll(); return }
+  if (g.dataset.sbid){ const f = getF(sel), b = f.boxes.find(b => b.id === g.dataset.sbid); selBox = b.id; drag = {sbox:b, o:b, f, dz:p.x - (sideX + (b.z || 0)), dy:(f.inner.h - p.y) - b.y}; svg.setPointerCapture(e.pointerId); renderAll(); return }
+  if (g.dataset.div !== undefined){ const f = getF(sel), d = geo(f).divs.find(d => d.path === g.dataset.div); drag = {div:d.path, dir:d.dir, r:d.r, f} }
+  else if (view === 'room'){ const f = getF(g.dataset.fid); sel = f.id; selOpen = null; drag = {o:f, dx:p.x - f.x, dy:p.y - f.y} }
+  else { const f = getF(sel), b = f.boxes.find(b => b.id === g.dataset.bid); selBox = b.id; drag = {o:b, f, dx:p.x - b.x, dy:(f.inner.h - p.y) - b.y} }
+  svg.setPointerCapture(e.pointerId); renderAll();
+});
+svg.addEventListener('pointermove', e => {
+  if (!drag) return; const p = pt(e);
+  if (drag.sbox){ // 옆모습: 앞뒤로 밀어넣기, 앞·뒤 벽과 다른 박스 앞뒤면에 착
+    const b = drag.sbox, f = drag.f, mz = Math.max(0, r1(f.inner.d - b.d));
+    let z = clamp(Math.round(p.x - sideX - drag.dz), 0, mz);
+    const cz = [0, mz];
+    for (const o of f.boxes) if (o !== b && xOver(b, o.x, o.x + o.w) && b.y < o.y + o.h && o.y < b.y + b.h) cz.push(r1((o.z || 0) + o.d), r1((o.z || 0) - b.d));
+    b.z = snapTo(z, cz, Math.max(SNAP_BOX, f.inner.d / 12), 0, mz);
+    // 위아래도: 바닥·선반·다른 박스 위아래 면에 착
+    const my = Math.max(0, f.inner.h - b.h), G = geo(f), cy = [0, my];
+    let y = clamp(Math.round((f.inner.h - p.y) - drag.dy), 0, my);
+    for (const c of G.cells) if (xOver(b, c.x0, c.x1)) cy.push(c.bottom, r1(c.top - b.h));
+    for (const o of f.boxes) if (o !== b && xOver(b, o.x, o.x + o.w) && zOver(b, o)) cy.push(r1(o.y + o.h), r1(o.y - b.h));
+    b.y = snapTo(y, cy, Math.max(SNAP_BOX, f.inner.w / 12), 0, my);
+    renderStage(); return;
+  }
+  if (drag.op){ // 문·창문: 가장 가까운 벽을 따라 미끄러짐, 모서리에 착
+    const R = S.room, o = drag.op, dist = {top:Math.abs(p.y), bottom:Math.abs(R.d - p.y), left:Math.abs(p.x), right:Math.abs(R.w - p.x)};
+    o.wall = Object.keys(dist).sort((a, b) => dist[a] - dist[b])[0];
+    const len = wallGeom(R, o.wall).len, along = o.wall === 'top' || o.wall === 'bottom' ? p.x : p.y, mx = Math.max(0, len - o.w);
+    o.pos = snapTo(clamp(Math.round(along - o.w / 2), 0, mx), [0, mx], SNAP_ROOM, 0, mx);
+    renderStage(); return;
+  }
+  if (drag.div !== undefined){ // 선반·칸막이 끌기: 다른 판과 높이/위치가 맞으면 착
+    const f = drag.f, n = node(f, drag.div), r = drag.r, G = geo(f), snapD = Math.max(SNAP_BOX, Math.max(f.inner.w, f.inner.h) / 30);
+    const others = G.divs.filter(d => d.dir === drag.dir && d.path !== drag.div).map(d => drag.dir === 'h' ? d.y0 : d.x0);
+    if (drag.dir === 'h'){ const lo = r.y0 + 1, hi = r.y1 - T - 1; let y = clamp(Math.round(f.inner.h - p.y - T / 2), lo, hi); y = snapTo(y, others, snapD, lo, hi); n.at = r1(y - r.y0) }
+    else { const lo = r.x0 + 1, hi = r.x1 - T - 1; let x = clamp(Math.round(p.x - T / 2), lo, hi); x = snapTo(x, others, snapD, lo, hi); n.at = r1(x - r.x0) }
+    renderStage(); return;
+  }
+  if (view === 'room'){ const f = drag.o, s = fp(f), mx = Math.max(0, S.room.w - s.w), my = Math.max(0, S.room.d - s.d);
+    f.x = clamp(Math.round(p.x - drag.dx), 0, mx); f.y = clamp(Math.round(p.y - drag.dy), 0, my);
+    // 자석: 벽과 다른 가구 모서리 중 가장 가까운 곳에 착. 더 밀면 겹칠 수 있음
+    const cx = [0, mx], cy = [0, my], own = localPieces(f).map(P => bbox(toRel(f, P)));
+    for (const o of S.furniture){ if (o === f) continue;
+      for (const q of pieces(o).map(bbox)) for (const r of own){
+        if (f.y + r.y0 < q.y1 && q.y0 < f.y + r.y1) cx.push(q.x0 - r.x1, q.x1 - r.x0, q.x0 - r.x0, q.x1 - r.x1);
+        if (f.x + r.x0 < q.x1 && q.x0 < f.x + r.x1) cy.push(q.y0 - r.y1, q.y1 - r.y0, q.y0 - r.y0, q.y1 - r.y1) } }
+    f.x = snapTo(f.x, cx, SNAP_ROOM, 0, mx); f.y = snapTo(f.y, cy, SNAP_ROOM, 0, my); }
+  else { const b = drag.o, f = drag.f, I = f.inner, mx = Math.max(0, I.w - b.w), my = Math.max(0, I.h - b.h), G = geo(f);
+    b.x = clamp(r1(Math.round(p.x - drag.dx)), 0, mx); b.y = clamp(Math.round((I.h - p.y) - drag.dy), 0, my);
+    // 자석: 칸 벽, 다른 수납함, 바닥·선반·상자 윗면에 착. 더 밀면 겹칠 수 있음
+    const cx = [], cy = [];
+    for (const c of G.cells){ cx.push(c.x0, r1(c.x1 - b.w)); if (xOver(b, c.x0, c.x1)) cy.push(c.bottom, r1(c.top - b.h)) }
+    for (const o of f.boxes){ if (o === b || !zOver(b, o)) continue;
+      if (b.y < o.y + o.h && o.y < b.y + b.h) cx.push(o.x - b.w, o.x + o.w, o.x, o.x + o.w - b.w);
+      if (xOver(b, o.x, o.x + o.w)){ cy.push(o.y + o.h, o.y - b.h); cx.push(o.x, o.x + o.w - b.w, o.x + (o.w - b.w) / 2) } }
+    const snapD = Math.max(SNAP_BOX, I.w / 12);
+    b.x = snapTo(b.x, cx, snapD, 0, mx); b.y = snapTo(b.y, cy, snapD, 0, my); }
+  renderStage();
+});
+const endDrag = () => { if (!drag) return;
+  if (drag.sbox) settle(drag.f, drag.sbox);
+  if (drag.op || drag.sbox){ drag = null; S.example = false; save(); renderAll(); return }
+  if (drag.div !== undefined) settleAll(drag.f); else if (view === 'inner') settle(drag.f, drag.o);
+  drag = null; S.example = false; save(); renderAll() };
+svg.addEventListener('click', e => {
+  if (e.target.closest('[data-oid],[data-fid],[data-bid],[data-sbid],[data-div]')) return;
+  const c = e.target.closest('[data-cell]');
+  if (c){ selCell = c.dataset.cell; selBox = null; renderAll(); return }
+  if (view === 'room' && selOpen){ selOpen = null; renderAll() }
+});
+svg.addEventListener('pointerup', endDrag); svg.addEventListener('pointercancel', endDrag);
+svg.addEventListener('dblclick', e => { const g = e.target.closest('[data-fid]'); if (g){ sel = g.dataset.fid; view = 'inner'; selBox = null; selCell = null; renderAll() } });
+
+document.addEventListener('change', e => { const i = e.target.dataset && e.target.dataset.cmp; if (i !== undefined){ cmpIds[+i] = e.target.value; renderStage(); renderPanel() } });
+let rzT = 0; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(renderStage, 150) });
+renderAll();
+initCloud();
+</script>

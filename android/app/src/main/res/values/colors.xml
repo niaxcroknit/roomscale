@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#3B4349</color>
+    <color name="colorPrimaryDark">#3B4349</color>
+    <color name="colorAccent">#8D969C</color>
+    <color name="app_paper">#F0F1F2</color>
+</resources>

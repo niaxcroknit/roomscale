@@ -1,0 +1,18 @@
+# Node 패키지: 안드로이드 빌드에 필요한 Capacitor 부품 4개만 저장소에 넣어요
+node_modules/*
+!node_modules/@capacitor/
+node_modules/@capacitor/*
+!node_modules/@capacitor/android/
+!node_modules/@capacitor/app/
+!node_modules/@capacitor/filesystem/
+!node_modules/@capacitor/share/
+node_modules/@capacitor/*/ios/
+node_modules/@capacitor/*/*.podspec
+node_modules/@capacitor/*/Package.swift
+
+# 빌드 결과물·개인 설정
+.DS_Store
+*.jks
+*.keystore
+keystore.properties
+www/_compose.html
