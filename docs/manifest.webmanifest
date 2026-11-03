@@ -1,0 +1,35 @@
+{
+ "name": "룸 스케일",
+ "short_name": "룸 스케일",
+ "lang": "ko",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#f0f1f2",
+ "theme_color": "#f0f1f2",
+ "description": "잰 치수 그대로 방에 가구를 놓아 보고, 옷장 속 수납까지 미리 맞춰 보는 배치도",
+ "icons": [
+  {
+   "src": "icons/icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/maskable-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "maskable"
+  },
+  {
+   "src": "icons/maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
